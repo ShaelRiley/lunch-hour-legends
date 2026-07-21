@@ -23,7 +23,11 @@ test("authoring specification is substantial and self-contained", () => {
 });
 
 test("archive gate denies executable types, traversal, and oversize packages", () => {
-  for (const marker of ["25*1024*1024", "names.length>500", "includes(\"..\")", "FORBIDDEN", "Missing required files"]) assert.ok(page.includes(marker), marker);
+  for (const marker of ["25*1024*1024", "count>500", "96*1024*1024", "includes(\"..\")", "FORBIDDEN", "Missing required files", "game.rpg SHA-256"]) assert.ok(page.includes(marker), marker);
+});
+
+test("real OHRRPGCE cartridge execution is wired through the official iframe bridge", () => {
+  for (const marker of ["/ohr/lhl-player.html", "lhl:mount-cartridge", "OHRRPGCE wip 20260512.14297", "engine:\"ohr-wasm\"", "IndexedDB · module-scoped"]) assert.ok(page.includes(marker), marker);
 });
 
 test("current character-map override is explicit", () => {

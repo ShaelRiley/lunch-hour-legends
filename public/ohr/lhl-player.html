@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Lunch Hour Legends — OHRRPGCE Player</title>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05040a;color:#efe5dc;font-family:system-ui,sans-serif}
+    body{display:grid;place-items:center}#shell{position:relative;width:100%;height:100%;display:grid;place-items:center}
+    canvas{display:block;background:#000;max-width:100%;max-height:100%;image-rendering:pixelated;outline:0}
+    #status{position:absolute;inset:auto 16px 16px 16px;padding:10px 12px;border:1px solid #705c7d;background:#130e1de8;font-size:12px;letter-spacing:.08em;text-align:center;z-index:2}
+    #status.ready{opacity:0;pointer-events:none;transition:opacity .5s 1s}#status.error{color:#ff9a8d;border-color:#b65350}
+    #start{position:absolute;inset:0;z-index:3;display:none;place-items:center;border:0;background:#08060dcc;color:#f4e7de;cursor:pointer}
+    #start span{padding:18px 24px;border:1px solid #99afff;background:linear-gradient(#3f66c4,#253f91);box-shadow:inset 0 2px #8da7ff,0 4px 0 #101b47;font-weight:800;letter-spacing:.1em}
+    #start.visible{display:grid}
+  </style>
+</head>
+<body>
+  <div id="shell"><canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas><button id="start" type="button"><span>START OHRRPGCE · ENABLE AUDIO</span></button><div id="status">Preparing official OHRRPGCE WebAssembly player…</div></div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const builtin = params.get("builtin");
+    const moduleId = (params.get("module") || "unassigned").replace(/[^a-zA-Z0-9._-]/g,"_");
+    const gamePath = builtin ? `/games/${builtin}.rpg` : `/workspace/lhl/${moduleId}/game.rpg`;
+    const status = document.getElementById("status");
+    const start = document.getElementById("start");
+    const setStatus = (message, kind = "") => { status.textContent = message; status.className = kind; };
+    const tellParent = (type, detail = {}) => parent.postMessage({ type, moduleId, ...detail }, location.origin);
+    const ensureDir = (path) => { const parts=path.split("/").filter(Boolean); let at=""; for(const part of parts){at += "/"+part; try{FS.mkdir(at)}catch(error){if(!FS.analyzePath(at).exists)throw error}} };
+    let cartridgeDependencyOpen = !builtin;
+    let syncDependencyOpen = true;
+    let started = false;
+
+    start.addEventListener("click", () => {
+      if (started || typeof callMain !== "function") return;
+      started = true;
+      start.classList.remove("visible");
+      setStatus("Starting cartridge…");
+      document.getElementById("canvas").focus();
+      tellParent("lhl:ohr-running", { gamePath, build:"wip 20260512.14297" });
+      callMain([gamePath]);
+    });
+
+    addEventListener("message", event => {
+      if (event.origin !== location.origin || event.data?.type !== "lhl:mount-cartridge" || event.data.moduleId !== moduleId || !cartridgeDependencyOpen) return;
+      try {
+        const bytes = new Uint8Array(event.data.game);
+        ensureDir(`/workspace/lhl/${moduleId}`);
+        FS.writeFile(gamePath, bytes);
+        FS.syncfs(false, error => {
+          if (error) { setStatus(`Save filesystem error: ${error}`, "error"); tellParent("lhl:ohr-error", { message:String(error) }); return; }
+          cartridgeDependencyOpen = false;
+          Module.removeRunDependency("LHL_CARTRIDGE");
+          tellParent("lhl:ohr-mounted", { bytes: bytes.byteLength, gamePath });
+        });
+      } catch (error) { setStatus(`Cartridge mount failed: ${error}`, "error"); tellParent("lhl:ohr-error", { message:String(error) }); }
+    });
+
+    var Module = {
+      arguments: [gamePath],
+      noInitialRun: true,
+      canvas: document.getElementById("canvas"),
+      print: text => console.log(`[OHR] ${text}`),
+      printErr: text => console.error(`[OHR] ${text}`),
+      preRun: [function () {
+        try { FS.mkdir("/workspace"); } catch {}
+        FS.mount(IDBFS, {}, "/workspace");
+        // OHRRPGCE's web build reads this native fallback when FreeBASIC COMMAND()
+        // is not populated by the surrounding Emscripten shell.
+        FS.writeFile("/ohrrpgce_arguments.txt", `${gamePath}\n`);
+        Module.addRunDependency("LHL_SYNC");
+        if (!builtin) Module.addRunDependency("LHL_CARTRIDGE");
+        FS.syncfs(true, error => {
+          syncDependencyOpen = false;
+          Module.removeRunDependency("LHL_SYNC");
+          if (error) { setStatus(`Save filesystem error: ${error}`, "error"); tellParent("lhl:ohr-error", { message:String(error) }); return; }
+          if (builtin) { tellParent("lhl:ohr-starting", { gamePath }); return; }
+          if (FS.analyzePath(gamePath).exists && params.get("installed") === "1") {
+            cartridgeDependencyOpen = false;
+            Module.removeRunDependency("LHL_CARTRIDGE");
+            tellParent("lhl:ohr-mounted", { persisted:true, gamePath });
+          } else {
+            setStatus("OHRRPGCE ready. Waiting for validated cartridge…");
+            tellParent("lhl:ohr-ready", { gamePath });
+          }
+        });
+      }],
+      onRuntimeInitialized: function () {
+        setStatus("Official OHRRPGCE runtime ready. Start it to enable audio.");
+        start.classList.add("visible");
+        tellParent("lhl:ohr-runtime-ready", { gamePath, build:"wip 20260512.14297" });
+      },
+      setStatus: function (text) { if (text) setStatus(text); }
+    };
+    window.addEventListener("beforeunload", () => { try { if (typeof FS !== "undefined") FS.syncfs(false,()=>{}); } catch {} });
+  </script>
+  <script async src="ohrrpgce-game.js"></script>
+</body>
+</html>
