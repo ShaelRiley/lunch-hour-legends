@@ -23,7 +23,7 @@ test("authoring specification is substantial and self-contained", () => {
 });
 
 test("archive gate denies executable types, traversal, and oversize packages", () => {
-  for (const marker of ["25*1024*1024", "count>500", "96*1024*1024", "includes(\"..\")", "FORBIDDEN", "Missing required files", "game.rpg SHA-256"]) assert.ok(page.includes(marker), marker);
+  for (const marker of ["25*1024*1024", "count>500", "96*1024*1024", "includes(\"..\")", "FORBIDDEN", "Missing required files", "game.rpg SHA-256", "parseOhrRpg", "native OHR lumps"]) assert.ok(page.includes(marker), marker);
 });
 
 test("real OHRRPGCE cartridge execution is wired through the official iframe bridge", () => {
