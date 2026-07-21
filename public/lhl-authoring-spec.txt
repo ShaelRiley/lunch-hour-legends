@@ -1,0 +1,2495 @@
+You are the lead game-systems architect, full-stack engineer, UX designer, game-engine developer, technical artist, data architect, validation engineer, and technical documentation author for a production-quality implementation of Lunch Hour Legends.
+
+Your task is to build:
+
+1. The reusable Lunch Hour Legends game engine.
+2. The player-facing Lunch Hour Legends application.
+3. The title-screen module launcher and save-management system.
+4. The Create Module interface.
+5. A Module Studio that converts a player’s creative description into a complete, self-contained module-generation prompt.
+6. The schemas, formulas, validators, compilers, tests, documentation, and reference content required to make the system maintainable and usable.
+7. A complete, versioned lhl.zip module-package specification.
+8. At least one validated reference module proving that the engine, application, import pipeline, save system, and module-authoring workflow function together.
+
+A complete Lunch Hour Legends design document is attached to this conversation.
+
+Read the entire attached design document before making architectural decisions or writing production code.
+
+The published design-document URL is provided for provenance:
+
+https://docs.google.com/document/d/e/2PACX-1vTdVqlcBpTuTrjewf9gthewOI4vkIiOl0Vo1T21NgRwyXpaQul-F2_J_V7ZJcngVhLtfotUe80hRnu2/pub
+
+Do not assume that either the application or an LLM receiving a generated module-creation prompt can access this URL.
+
+The application’s extended module-creation prompt must embed the complete Lunch Hour Legends module-authoring specification and every requirement needed to produce a valid lhl.zip package without external access.
+
+The published URL must still be included in generated prompts as an optional provenance link, but correctness must never depend on opening it.
+
+==================================================
+SOURCE-OF-TRUTH PRIORITY
+==================================================
+
+Use sources in this order:
+
+1. The attached full Lunch Hour Legends design document.
+2. This implementation brief.
+3. Reasonable engineering judgment for details the design document genuinely leaves unresolved.
+
+The published URL is a provenance link, not a required dependency.
+
+When the attached document and this brief differ, follow the attached document unless this brief explicitly adds a stricter implementation or self-containment requirement.
+
+Document meaningful assumptions.
+
+Do not reduce the project to a generic RPG engine.
+
+Implement Lunch Hour Legends as defined by the attached design document.
+
+The worked classes, abilities, items, enemies, formations, spells, maps, characters, scenes, and soundtrack examples are calibration fixtures and demonstrations unless the document explicitly marks them as mandatory content.
+
+Do not merely summarize the document or return pseudocode.
+
+Create a runnable application and its supporting source files.
+
+==================================================
+CORE PRODUCT GOAL
+==================================================
+
+Build a local-first application supporting the complete Lunch Hour Legends lifecycle:
+
+1. Launch the Lunch Hour Legends shell.
+2. Start the currently loaded module.
+3. Continue a saved game from the currently loaded module.
+4. Load a prepared lhl.zip module.
+5. Validate the module before activation.
+6. Play through its town, overworld, dungeon segments, safe nodes, cutscenes, exploration, battles, advancement, equipment, shops, relationships, and endings.
+7. Save and restore progress.
+8. Open the Create Module screen.
+9. Type a plain-language description of a desired custom module.
+10. Generate one long, self-contained prompt by combining:
+    - the user’s exact creative request;
+    - normalized creative selections;
+    - the complete Lunch Hour Legends module-authoring specification;
+    - the exact lhl.zip package contract;
+    - all formulas, schemas, limits, validation rules, and packaging instructions.
+11. Copy that combined prompt into an LLM of the user’s choice.
+12. Receive an lhl.zip package from the external LLM or agent.
+13. Import, validate, preview, and activate the package.
+
+The deterministic game engine, runtime UI, module format, validator, Module Studio, prompt compiler, and imported content must be separate components with clear interfaces.
+
+The application must not require an embedded LLM, external LLM API, account, subscription, cloud database, or server to play modules or generate the copy-paste prompt.
+
+==================================================
+FIRST PHASE: COMPLETE DOCUMENT ANALYSIS
+==================================================
+
+Before implementing the system:
+
+1. Read the complete attached design document.
+2. Extract every normative requirement.
+3. Distinguish mandatory rules from illustrative examples.
+4. Identify every required:
+   - game system;
+   - formula;
+   - constant;
+   - data entity;
+   - schema;
+   - limit;
+   - validator;
+   - application screen;
+   - runtime behavior;
+   - module-package file;
+   - generation step;
+   - acceptance criterion.
+5. Produce a requirements traceability matrix mapping every major requirement to:
+   - implementation location;
+   - data model or schema;
+   - validator;
+   - automated test;
+   - player-facing or author-facing interface.
+6. Identify contradictory, duplicated, obsolete, or underspecified passages.
+7. Resolve conflicts using the document’s most recent and most specific rule.
+8. Record unresolved decisions in an assumptions document.
+9. Build a canonical terminology glossary.
+10. Normalize concepts such as:
+    - floor versus progression segment;
+    - module versus cartridge;
+    - final villain versus final boss;
+    - safe node;
+    - town NPC;
+    - wildcard NPC;
+    - central character;
+    - ability cost;
+    - item value;
+    - encounter threat;
+    - scene;
+    - cutscene;
+    - soundtrack track;
+    - motif suite.
+
+After the analysis, continue directly into implementation.
+
+Do not stop after presenting a plan unless implementation is genuinely blocked by missing information that cannot be safely inferred.
+
+==================================================
+REQUIRED HIGH-LEVEL GAME PROFILE
+==================================================
+
+The implementation must preserve the canonical profile from the attached document, including its current character-map rule:
+
+- Exactly nine central named characters.
+- Exactly four playable heroes.
+- Each playable hero has a distinct, original, module-specific class.
+- Exactly one central character is the final villain.
+- Exactly four central characters are nonparty story-driving NPCs.
+- Exactly two of those NPCs are encountered in the starting town during the opening or first town phase.
+- Exactly two are wildcard NPCs whose roles, functions, allegiances, and locations may vary to serve the story.
+- Every central character has a complete character-bible record.
+- Every character has a directed relationship with each of the other eight central characters.
+- The relationship graph therefore contains exactly 72 directed interpersonal relationship records.
+- Every central character also has a self-concept record, for nine self-concept records total.
+- Every game contains exactly sixteen mandatory cutscenes.
+- Every canonical game contains exactly twelve full-length original soundtrack tracks.
+- Every game uses exactly five environment tilesets:
+  - Town and Civic;
+  - Overworld;
+  - Dungeon A;
+  - Dungeon B;
+  - Dungeon C.
+- Every canonical game contains eight dungeon progression segments.
+- Those eight segments may represent one continuous dungeon or several narratively connected locations.
+- Every segment boundary contains a safe node.
+- Every safe node supports saving, return to town, and direct re-entry.
+- Every segment contains the required treasure cadence.
+- Every completed segment advances the town market.
+- Every market stage adds useful purchasing options for all four playable heroes.
+
+Implement all further details from the attached document rather than treating this list as complete.
+
+==================================================
+PREFERRED SYSTEM ARCHITECTURE
+==================================================
+
+Prefer a TypeScript monorepo unless the attached design document specifies a stronger requirement.
+
+Use a modular structure comparable to:
+
+packages/core
+- deterministic rules engine
+- seeded random-number generation
+- game-state transitions
+- exploration
+- cutscene execution
+- dialogue
+- relationship-state transitions
+- combat resolution
+- action economy
+- status resolution
+- class progression
+- inventory and equipment
+- treasure acquisition
+- shops and economy
+- safe nodes
+- return-to-town travel
+- endings
+- save-state serialization
+
+packages/schemas
+- canonical TypeScript types
+- runtime validation schemas
+- exported JSON Schemas
+- shared enumerations
+- common data types
+- schema-version declarations
+- migration support
+
+packages/balance
+- UCS-PB implementation
+- class-cost calculations
+- ability-cost calculations
+- item-cost calculations
+- enemy-threat calculations
+- formation-threat calculations
+- economy simulations
+- benchmark fixtures
+- dominance analysis
+- hardbinding analysis
+- recursion analysis
+- calculation reports
+
+packages/validators
+- archive validation
+- manifest validation
+- schema validation
+- reference validation
+- semantic validation
+- balance validation
+- progression validation
+- relationship validation
+- narrative validation
+- cutscene validation
+- music validation
+- graphics validation
+- map validation
+- shop validation
+- economy-loop detection
+- reachability analysis
+- save compatibility validation
+- security validation
+
+packages/module-spec
+- canonical Module Authoring Specification
+- generated human-readable specification
+- generated prompt specification
+- package-tree declaration
+- canonical constants
+- version metadata
+- specification hash
+- schema coverage reports
+- formula coverage reports
+
+packages/prompt-compiler
+- Create Module input model
+- Module Studio state
+- creative-brief normalization
+- authority-level handling
+- static specification insertion
+- prompt assembly
+- prompt integrity checks
+- character-count estimation
+- token-count estimation
+- one-part export
+- deterministic multipart export when necessary
+- clipboard output
+- TXT export
+- Markdown export
+
+packages/module-loader
+- ZIP parsing
+- safe extraction
+- path validation
+- manifest reading
+- schema migration
+- module preview
+- validation orchestration
+- activation
+- rollback
+
+packages/asset-pipeline
+- tileset assembly
+- sprite-sheet assembly
+- portrait-sheet assembly
+- battle-graphic assembly
+- MIDI compilation
+- OGG rendering
+- audio validation
+- asset manifests
+- deterministic conversion
+
+apps/player
+- trusted title screen
+- player-facing runtime
+- module card
+- new game
+- continue
+- load module
+- create module
+- save selection
+- module preview
+- gameplay interfaces
+
+apps/module-studio
+- guided creative form
+- creative-brief editor
+- prompt preview
+- raw prompt preview
+- copy action
+- download actions
+- imported-package validator
+- module preview
+- specification diagnostics
+
+tools
+- command-line module validator
+- schema exporter
+- prompt compiler
+- package packer
+- package unpacker
+- benchmark runner
+- music renderer
+- graphics validator
+
+Unless the design requires a server, favor a local-first architecture.
+
+Suitable default technologies include:
+
+- TypeScript
+- React
+- Vite or another lightweight build tool
+- Zod or an equivalent runtime-schema library
+- JSON Schema
+- IndexedDB for saves, module storage, and Module Studio drafts
+- Vitest for unit and integration tests
+- Playwright for application workflows
+- JSZip or a carefully validated equivalent for local ZIP handling
+
+Keep the core engine independent of React and other UI frameworks.
+
+Use pure functions for deterministic game rules wherever practical.
+
+==================================================
+TRUSTED APPLICATION SHELL
+==================================================
+
+The title screen and module-management interface belong to the trusted Lunch Hour Legends application shell.
+
+Loaded modules may provide:
+
+- module title;
+- logo or preview image;
+- title-screen music;
+- presentation metadata;
+- descriptive copy;
+- compatible decorative assets.
+
+Loaded modules may not replace, remove, reorder, spoof, or execute code inside the trusted shell.
+
+The title screen contains exactly four primary options:
+
+1. New Game
+2. Continue
+3. Load Module
+4. Create Module
+
+An informational module card may display the active module’s:
+
+- title;
+- version;
+- author;
+- preview;
+- validation status;
+- content information;
+- current playtime;
+- save availability.
+
+The module card does not become a fifth primary option.
+
+==================================================
+TITLE-SCREEN BEHAVIOR
+==================================================
+
+NEW GAME
+
+- Starts the currently loaded module from its declared opening state.
+- When saves already exist, obtain clear confirmation before replacing progress.
+- Never delete unrelated module saves.
+- Use the loaded module’s compatible starting configuration.
+- Fail safely when the module becomes invalid after loading.
+
+CONTINUE
+
+- Continues the most recent compatible save belonging to the currently loaded module.
+- Is visibly unavailable when no compatible save exists.
+- Never loads a save from another module.
+- Reports version incompatibility clearly.
+- Provides access to the full save-selection interface when multiple saves exist.
+
+LOAD MODULE
+
+- Opens a local file selector for a prepared lhl.zip file.
+- Reads and validates the package without activating it first.
+- Displays a preview and validation report.
+- Requires explicit activation after successful validation.
+- Never replaces the current module when validation fails.
+- Preserves the previous active module and its saves.
+- Stores the imported package locally after approval.
+- Rejects malformed archives, path traversal, unsupported versions, executable payloads, oversized packages, missing files, broken references, and invalid assets.
+
+CREATE MODULE
+
+- Opens the Create Module screen.
+- Does not call an LLM API.
+- Does not require an account or API key.
+- Does not transmit the user’s description.
+- Produces a complete prompt locally.
+- Allows one-click copy.
+- Allows TXT and Markdown download.
+- Returns the user to Load Module after an external LLM creates the ZIP.
+
+==================================================
+CREATE MODULE SCREEN
+==================================================
+
+The minimum Create Module screen contains:
+
+- A heading or prompt reading:
+  “Describe the module you want here”
+- A large multiline text field
+- A Copy Module Prompt button
+- A Back action
+
+The simple screen may link to an advanced Module Studio, but the primary workflow must remain understandable without opening the advanced interface.
+
+When the user clicks Copy Module Prompt, the application copies one continuous text payload.
+
+The copied payload begins with the user’s exact entered description.
+
+Nothing may be placed before the user’s text.
+
+After the user’s text, insert a clear delimiter comparable to:
+
+--- BEGIN AUTOMATIC LUNCH HOUR LEGENDS MODULE REQUIREMENTS ---
+
+The generated requirements section must include:
+
+- specification version;
+- specification hash;
+- engine compatibility version;
+- schema version;
+- complete module-authoring specification;
+- complete package tree;
+- all formulas;
+- all required schemas;
+- all validation rules;
+- all output instructions.
+
+End with a delimiter comparable to:
+
+--- END AUTOMATIC LUNCH HOUR LEGENDS MODULE REQUIREMENTS ---
+
+The two halves are copied as one continuous prompt.
+
+The user should be able to:
+
+1. Enter a description.
+2. Click Copy Module Prompt.
+3. Paste the combined prompt into an LLM or agent of choice.
+4. Receive an lhl.zip package.
+5. Return to Lunch Hour Legends.
+6. Load and validate the package.
+
+Provide a fallback selectable text area when clipboard access is denied.
+
+==================================================
+NON-NEGOTIABLE SELF-CONTAINMENT REQUIREMENT
+==================================================
+
+Assume the LLM receiving a Module Studio-generated prompt:
+
+- cannot open the published design-document URL;
+- cannot access the original attached design document;
+- has no prior knowledge of Lunch Hour Legends;
+- cannot ask the engine for missing rules;
+- may have no internet access;
+- may not have access to a repository;
+- must create a complete, valid lhl.zip package using only the generated prompt.
+
+Therefore, every extended module-creation prompt produced by the application must contain ALL information required to:
+
+- design the module;
+- calculate all mechanical content;
+- generate all required data;
+- generate or provide all required assets;
+- validate the module;
+- construct the required files;
+- package the archive;
+- produce a complete lhl.zip.
+
+The generated prompt must never depend on:
+
+- an external document;
+- a webpage;
+- a repository;
+- a previous conversation;
+- hidden context;
+- unstated conventions;
+- formulas omitted for brevity;
+- schemas described elsewhere.
+
+The published design-document URL may be included for provenance:
+
+https://docs.google.com/document/d/e/2PACX-1vTdVqlcBpTuTrjewf9gthewOI4vkIiOl0Vo1T21NgRwyXpaQul-F2_J_V7ZJcngVhLtfotUe80hRnu2/pub
+
+The generated prompt must label it:
+
+“Original design-document provenance link. External access is optional and is not required to complete this task.”
+
+The prompt must not instruct the receiving LLM to read the URL before proceeding.
+
+The attached design document remains authoritative while building the engine and prompt compiler.
+
+The prompt compiler must transform the design document’s complete module-authoring requirements into an embedded, versioned specification.
+
+==================================================
+CANONICAL MODULE AUTHORING SPECIFICATION
+==================================================
+
+Create a versioned, machine-maintained Module Authoring Specification derived from the entire attached design document.
+
+This specification must contain every rule a separate LLM needs to create a valid lhl.zip module, including:
+
+1. Module package structure.
+2. Required filenames.
+3. Optional filenames.
+4. Directory layout.
+5. Archive-root behavior.
+6. Manifest schema.
+7. Every required data entity.
+8. Every optional data entity.
+9. Field names.
+10. Field types.
+11. Required and optional fields.
+12. Defaults.
+13. Ranges.
+14. Enumerations.
+15. ID rules.
+16. Cross-reference rules.
+17. Engine compatibility.
+18. Schema versioning.
+19. Character requirements.
+20. Relationship requirements.
+21. Self-concept requirements.
+22. Class-construction requirements.
+23. Ability-construction requirements.
+24. Effect primitives.
+25. Target schemas.
+26. Item construction.
+27. Equipment slots.
+28. Consumables.
+29. Enemy construction.
+30. Formation construction.
+31. Miniboss construction.
+32. Final-villain and boss-phase construction.
+33. Story requirements.
+34. Sixteen-cutscene requirements.
+35. Dialogue requirements.
+36. Map requirements.
+37. Five-tileset requirements.
+38. Eight-segment progression.
+39. Safe-node requirements.
+40. Return-to-town behavior.
+41. Treasure cadence.
+42. Shop-refresh cadence.
+43. Economy.
+44. Twelve-track soundtrack.
+45. Character motifs.
+46. MIDI-source requirements.
+47. OGG-runtime requirements.
+48. Character field sprites.
+49. Portrait expressions.
+50. Battle sprites.
+51. Enemy graphics.
+52. Audio and graphics manifests.
+53. State flags.
+54. Conditions.
+55. State mutations.
+56. Rewards.
+57. Endings.
+58. UCS-PB formulas.
+59. Reference tables.
+60. Class budgets.
+61. Ability ceilings.
+62. Item budgets.
+63. Enemy Threat Value.
+64. Formation Threat Value.
+65. Reliability.
+66. Applicability.
+67. Availability.
+68. Expected target ratio.
+69. Delay discounts.
+70. Persistence.
+71. Action-generation pricing.
+72. Tempo recursion.
+73. Flexibility pricing.
+74. Mode pricing.
+75. Complexity pricing.
+76. Summons.
+77. Transformations.
+78. Fields.
+79. Reactions.
+80. Interrupts.
+81. Status resistance.
+82. Boss diminishing returns.
+83. Phase integrity.
+84. Dominance.
+85. Hardbinding.
+86. Weakness-erasure limits.
+87. Item and resource loops.
+88. Economy exploits.
+89. Reachability.
+90. Mandatory-content availability.
+91. Validation checks.
+92. Severity levels.
+93. Balance reports.
+94. Packaging rules.
+95. File-integrity rules.
+96. Asset-size rules.
+97. Content-safety metadata.
+98. Save compatibility.
+99. Required fallback behavior.
+100. Any other information needed for direct import and play.
+
+Do not replace exact rules with statements such as:
+
+- “balance appropriately”;
+- “follow UCS-PB”;
+- “use the design document”;
+- “refer to the schema”;
+- “see external documentation.”
+
+Include the actual formulas, variables, constants, limits, definitions, and procedures.
+
+Where the design document permits several legal approaches, explain the legal range.
+
+Label illustrative examples as examples.
+
+Generate the human-readable prompt specification from canonical schemas and constants wherever practical so it cannot drift from the engine.
+
+==================================================
+ENGINE REQUIREMENTS
+==================================================
+
+Implement every required system in the attached design document, including:
+
+- the nine-character ensemble;
+- directed relationships;
+- self-concepts;
+- the four-character party;
+- unique module-specific classes;
+- levels and checkpoint progression;
+- ranks and derived statistics;
+- abilities;
+- resources;
+- permissions;
+- actions;
+- targets;
+- accuracy;
+- critical hits;
+- reliability;
+- applicability;
+- availability;
+- damage;
+- healing;
+- prevention;
+- support;
+- control;
+- movement;
+- tempo;
+- utility;
+- information;
+- boundary effects;
+- delay;
+- persistent effects;
+- fields;
+- stances;
+- reactions;
+- counters;
+- interrupts;
+- summons;
+- transformations;
+- status effects;
+- status resistance;
+- boss diminishing returns;
+- inventory;
+- equipment;
+- consumables;
+- treasure;
+- shops;
+- market stages;
+- buying;
+- selling;
+- rewards;
+- enemies;
+- formations;
+- elites;
+- minibosses;
+- final villains;
+- boss phases;
+- town;
+- overworld;
+- dungeon segments;
+- safe nodes;
+- return travel;
+- cutscenes;
+- dialogue;
+- portrait expressions;
+- character movement;
+- emotes;
+- story flags;
+- relationship transitions;
+- endings;
+- soundtrack cueing;
+- save and load;
+- seeded reproducibility;
+- module-defined content.
+
+Separate mechanical data from presentation text.
+
+Represent module content declaratively rather than through imported executable code.
+
+==================================================
+UCS-PB AND BALANCE IMPLEMENTATION
+==================================================
+
+Implement the complete Unified Content Scaling and Point-Budgeting system from the attached design document.
+
+This includes every defined:
+
+- vector;
+- unit;
+- level baseline;
+- rank multiplier;
+- class-cost multiplier;
+- effect primitive;
+- SAE conversion;
+- CP conversion;
+- CVU budget;
+- IVU budget;
+- reliability calculation;
+- applicability calculation;
+- availability calculation;
+- expected-target calculation;
+- timing adjustment;
+- delayed-value discount;
+- persistence discount;
+- area multiplier;
+- summon calculation;
+- action-generation calculation;
+- tempo-recursion formula;
+- flexibility surcharge;
+- target-schema surcharge;
+- element surcharge;
+- complexity cost;
+- minimum cost floor;
+- active-cost ceiling;
+- capstone ceiling;
+- item factor;
+- slot factor;
+- compatibility factor;
+- permanence factor;
+- timing factor;
+- Enemy Threat Value formula;
+- formation modifier;
+- boss rule;
+- status rule;
+- control rule;
+- validation limit.
+
+Do not approximate exact formulas.
+
+Use the document’s worked examples as executable fixtures.
+
+Where an example uses rounding or an explicit approximation, set and document a test tolerance.
+
+Provide functions that can:
+
+- calculate a class budget;
+- calculate an ability’s Active Cost;
+- calculate Core Real Cost;
+- calculate Final Real Cost;
+- calculate an item’s final IVU;
+- calculate enemy threat;
+- calculate formation threat;
+- calculate market affordability;
+- calculate treasure-stage compliance;
+- compare content against level limits;
+- produce a transparent cost report;
+- identify the exact failing component;
+- suggest bounded corrections without silently changing creative identity.
+
+==================================================
+NINE-CHARACTER CAST SYSTEM
+==================================================
+
+Every canonical module contains exactly nine central characters:
+
+- Four playable heroes.
+- One final villain.
+- Two story-driving NPCs encountered in the starting town.
+- Two wildcard NPCs.
+
+The two wildcard NPCs may be:
+
+- guides;
+- rivals;
+- witnesses;
+- captives;
+- investigators;
+- merchants;
+- missing persons;
+- temporary companions;
+- double agents;
+- dependents;
+- apparent antagonists;
+- victims;
+- partial architects of the crisis;
+- another story-serving role.
+
+They may appear in the dungeon, town later in the story, a special location, a cutscene, a safe node, or another reachable context.
+
+Every central character requires the complete character schema defined by the design document.
+
+Every pair of characters requires two directed relationship records.
+
+Nine characters create:
+
+- 36 unordered pairs;
+- 72 directed interpersonal relationships;
+- eight outward relationships per character.
+
+Every character also requires one self-concept record.
+
+The validator must require:
+
+- nine character records;
+- 72 directed relationship records;
+- nine self-concept records;
+- exactly four playable characters;
+- exactly one final villain;
+- exactly two opening-town story-driving NPCs;
+- exactly two wildcard NPCs.
+
+==================================================
+SIXTEEN-CUTSCENE SYSTEM
+==================================================
+
+Every module contains exactly sixteen mandatory cutscenes.
+
+Implement the exact pacing, placement, dramatic-purpose, relationship-source, runtime, and coverage requirements from the design document.
+
+The scenes must:
+
+- be distributed through the complete critical path;
+- avoid chronological bunching;
+- be derived from relationship and self-concept data;
+- use character movement;
+- use facing changes;
+- use dialogue;
+- use portrait expressions;
+- use emotes;
+- use music and stingers;
+- update flags and relationship states;
+- remain skippable without corrupting state;
+- compile into trusted supported runtime behavior.
+
+Mandatory cutscenes do not occur on the overworld unless the design document later explicitly permits an exception.
+
+Scene locations primarily include:
+
+- the starting town;
+- dungeon interiors;
+- safe nodes;
+- inter-floor or inter-segment locations;
+- final approach;
+- post-boss resolution.
+
+Implement the exact sixteen-scene story cadence from the design document.
+
+==================================================
+MAP AND TILESET SYSTEM
+==================================================
+
+Every canonical module uses exactly five environment tilesets:
+
+1. Town and Civic
+2. Overworld
+3. Dungeon A
+4. Dungeon B
+5. Dungeon C
+
+Do not create unnecessary full environment tilesets for:
+
+- ordinary town interiors;
+- shops;
+- homes;
+- civic interiors;
+- boss arenas;
+- vehicles;
+- weather;
+- overlays;
+- battle backdrops.
+
+Use the design document’s classification rules for those assets.
+
+Implement the exact tileset dimensions, semantic inventory, collision metadata, animation rules, tile allocations, and OHRRPGCE import requirements from the design document.
+
+Map creation must proceed from semantic and structural data rather than attempting to infer collision from completed artwork.
+
+The map pipeline must include:
+
+1. Narrative geography.
+2. Segment purpose.
+3. Tileset assignment.
+4. Abstract room graph.
+5. Critical-path proof.
+6. Optional-route design.
+7. Safe-node linkage.
+8. Grid embedding.
+9. Semantic tile painting.
+10. Collision generation.
+11. Object placement.
+12. Treasure placement.
+13. Encounter placement.
+14. Cutscene staging.
+15. Beautification.
+16. Reachability validation.
+17. Runtime compilation.
+18. Deterministic walkthrough testing.
+
+Every canonical module contains eight dungeon progression segments.
+
+A segment may be:
+
+- a literal floor;
+- one region of a forest;
+- a graveyard section;
+- part of a mansion;
+- a tower level;
+- a volcano region;
+- part of a swamp;
+- a cave;
+- a laboratory;
+- another coherent progression unit.
+
+The eight segments may belong to one dungeon or several connected dungeons.
+
+==================================================
+SAFE NODES AND TRAVEL
+==================================================
+
+A safe node appears at every dungeon-segment boundary and before the final confrontation.
+
+At a safe node the player may:
+
+- save manually;
+- update a rotating safe-node autosave;
+- receive declared recovery;
+- continue;
+- return to town.
+
+After unlocking a safe node, the player may return from town directly to the latest unlocked node.
+
+The module defines a premise-appropriate travel explanation, such as:
+
+- ski lift;
+- gondola;
+- cable car;
+- teleporter;
+- magical gate;
+- elevator;
+- shuttle;
+- ferry;
+- service tunnel;
+- river route;
+- maintenance exit;
+- secret path;
+- short safe overworld connection.
+
+Travel mechanics must remain functionally equivalent across settings.
+
+Returning to town must not:
+
+- restore one-time treasure;
+- reset mandatory encounters;
+- reset story flags;
+- duplicate rewards;
+- enable an economy loop;
+- trap the player;
+- require repetitive mandatory combat.
+
+==================================================
+CHARACTER GRAPHICS
+==================================================
+
+Implement the exact field-sprite, portrait, battle-sprite, enemy-graphic, palette, dimension, anchor, frame-order, expression, and import requirements from the design document.
+
+Every central character requires:
+
+- a stable visual identity;
+- a field walkabout spritesheet;
+- a portrait-expression sheet;
+- asset IDs linked to character IDs.
+
+Every playable hero also requires battle graphics.
+
+The final villain requires appropriate boss graphics and any required phase variants.
+
+Each central character receives the required portrait expressions from the design document.
+
+The graphics pipeline must:
+
+1. Define a cartridge-wide visual bible.
+2. Produce a comparative lineup.
+3. Lock a neutral portrait and full-body reference.
+4. Generate expressions.
+5. Generate field frames.
+6. Generate battle and boss graphics.
+7. Assemble sheets deterministically.
+8. Quantize or convert as required.
+9. Validate dimensions and frame order.
+10. Validate anchors.
+11. Validate silhouette and identity.
+12. Validate handedness and costume consistency.
+13. Import into the runtime.
+14. Repair failed frames individually.
+
+Do not depend on one-shot generation of flawless complete sprite sheets.
+
+==================================================
+DIALOGUE SYSTEM
+==================================================
+
+Treat dialogue as structured performance data.
+
+Implement:
+
+- fact IDs;
+- who knows each fact;
+- who suspects each fact;
+- misunderstandings;
+- reveal permissions;
+- character voice fingerprints;
+- syntax tendencies;
+- vocabulary tendencies;
+- sentence-length tendencies;
+- humor patterns;
+- emotional evasions;
+- forms of address;
+- recurring concerns;
+- prohibited drift;
+- speaker;
+- listeners;
+- intent;
+- subtext;
+- relationship context;
+- portrait expression;
+- movement;
+- emote;
+- choices;
+- flags;
+- repeat behavior;
+- fallback dialogue.
+
+Use the dialogue-generation and validation methodology in the design document.
+
+Include a speaker-swap test that flags dialogue that remains equally plausible when two character names are exchanged.
+
+==================================================
+TWELVE-TRACK MUSIC SYSTEM
+==================================================
+
+Every canonical module contains exactly twelve original full-length tracks:
+
+1. Main Title and Ensemble Overture
+2. Town Theme
+3. Overworld Theme
+4. Regular Battle Theme
+5. Final Boss Theme
+6. Dungeon Theme I
+7. Dungeon Theme II
+8. Dungeon Theme III
+9. Cutscene Theme I
+10. Cutscene Theme II
+11. Cutscene Theme III
+12. End Credits Theme
+
+Each of the nine central characters requires:
+
+- an identity motif;
+- a conflict cell;
+- a resolution variant;
+- symbolic motif data;
+- validated MIDI motif clips;
+- tonal and rhythmic conventions;
+- permitted transformations;
+- prohibited clichés.
+
+The soundtrack must derive full tracks from these motifs and relationship transformations.
+
+Canonical editable source:
+
+- structured score data;
+- Standard MIDI File Type 1;
+- the exact PPQ and MIDI restrictions in the design document.
+
+Canonical runtime format:
+
+- deterministic OGG Vorbis renders;
+- produced through one fixed, versioned synthesizer;
+- using one declared, licensed sound set.
+
+Do not use:
+
+- BAM as a new source format;
+- MP3 as an intermediate delivery format;
+- device-dependent raw MIDI as the canonical player experience.
+
+Implement the exact:
+
+- motif coverage rules;
+- relationship-transformation rules;
+- track-duration targets;
+- loop rules;
+- loudness targets;
+- bitrate rules;
+- package-size limits;
+- renderer metadata;
+- music cueing;
+- cutscene cueing;
+- validation procedures.
+
+==================================================
+TREASURE, ITEMS, SHOPS, AND ECONOMY
+==================================================
+
+Implement the exact item and economy requirements from the attached design document.
+
+The canonical eight-segment profile includes the declared item-definition target.
+
+Each segment contains exactly four major treasure events:
+
+1. Guaranteed critical-path treasure.
+2. Optional exploration cache.
+3. Challenge, elite, puzzle, relationship, or authored optional reward.
+4. Late-segment, miniboss, choice-chest, or safe-node reward.
+
+This creates exactly 32 major treasure events.
+
+Implement the exact stage-by-stage IVU progression from the document.
+
+Treasure must remain evenly distributed.
+
+No playable hero may experience an invalid equipment-option drought.
+
+Critical progression cannot depend on rare random drops.
+
+Every completed segment advances the town market.
+
+The town market contains stage 0 and stages 1 through 8.
+
+Every active town shop receives new inventory at every stage transition.
+
+Across the combined market, every refresh must provide the exact minimum purchase coverage required by the design document, including useful permanent options for all four playable characters.
+
+Implement:
+
+- cumulative stock;
+- rare-stock limits;
+- consumable restocking;
+- required-counter availability;
+- affordability ratios;
+- expected spendable gold;
+- resale;
+- diminishing farming returns;
+- loop prevention;
+- market-refresh presentation;
+- shop dialogue changes.
+
+==================================================
+ENEMIES AND ENCOUNTERS
+==================================================
+
+Implement the enemy roster, introduction cadence, formation cadence, Enemy Threat Value ranges, elite rules, miniboss rules, boss rules, reward rules, and tactical-variety requirements from the attached design document.
+
+Later enemies must become more demanding through:
+
+- behavior;
+- formation interaction;
+- target priority;
+- resource pressure;
+- timing;
+- positioning;
+- resistance;
+- control;
+- telegraphed attacks;
+- counter requirements.
+
+Do not count palette swaps or simple statistic increases as new enemy definitions.
+
+Every segment must introduce a tactical question and provide accessible answers before those answers become mandatory.
+
+==================================================
+VALIDATION SYSTEM
+==================================================
+
+The validator must do more than validate JSON syntax.
+
+Create actionable validation reports covering:
+
+- malformed archives;
+- archive path traversal;
+- unsupported executable content;
+- missing required files;
+- invalid filenames;
+- unsupported versions;
+- schema violations;
+- unknown IDs;
+- duplicate IDs;
+- broken references;
+- missing central characters;
+- incorrect character-role counts;
+- missing relationships;
+- missing self-concepts;
+- missing cutscenes;
+- scene bunching;
+- missing relationship-derived scenes;
+- map disconnection;
+- invalid collision;
+- inaccessible treasure;
+- broken safe nodes;
+- invalid return routes;
+- invalid saves;
+- missing tilesets;
+- invalid sprite sheets;
+- missing portraits;
+- missing portrait expressions;
+- invalid MIDI;
+- missing motifs;
+- missing soundtrack tracks;
+- broken OGG loops;
+- missing music cues;
+- class-budget violations;
+- ability-cost violations;
+- item-budget violations;
+- enemy-threat violations;
+- formation-threat violations;
+- excessive complexity;
+- unsupported primitives;
+- target-schema abuse;
+- excessive flexibility;
+- action-generation chains;
+- tempo recursion;
+- reaction recursion;
+- summon recursion;
+- item loops;
+- resource loops;
+- economy exploits;
+- mandatory-item dependencies;
+- unavailable counters;
+- inaccessible progression;
+- weakness erasure;
+- phase skipping;
+- status locks;
+- class dominance;
+- item dominance;
+- class hardbinding;
+- item hardbinding;
+- dialogue continuity failures;
+- characterization drift;
+- speaker interchangeability;
+- unreachable endings;
+- unresolved mandatory flags;
+- invalid package hashes.
+
+Every report message must identify:
+
+1. Affected object.
+2. Violated rule.
+3. Measured value.
+4. Permitted value.
+5. Likely consequence.
+6. One or more compliant repair options.
+
+Separate warnings from errors.
+
+Do not silently rewrite imported content.
+
+==================================================
+PLAYER APPLICATION
+==================================================
+
+Implement the player-facing interfaces required by the attached document.
+
+Provide interfaces for:
+
+- title screen;
+- module card;
+- new game;
+- continue;
+- save selection;
+- load module;
+- module preview;
+- validation report;
+- create module;
+- town navigation;
+- overworld navigation;
+- dungeon maps;
+- safe nodes;
+- return travel;
+- cutscenes;
+- dialogue;
+- choices;
+- party status;
+- character review;
+- class review;
+- ability review;
+- inventory;
+- equipment;
+- shops;
+- treasure;
+- combat;
+- rewards;
+- advancement;
+- relationship changes;
+- final confrontation;
+- endings;
+- credits.
+
+The interface should feel like a game rather than an administrative database.
+
+Use progressive disclosure for technical details.
+
+Provide an inspectable calculation panel for designers and debugging.
+
+Support:
+
+- keyboard navigation;
+- controller navigation where practical;
+- touch;
+- screen readers;
+- visible focus;
+- responsive layouts;
+- reduced-motion behavior;
+- readable text sizing.
+
+==================================================
+ADVANCED MODULE STUDIO
+==================================================
+
+Build a guided Module Studio for users who want more control than the simple Create Module text field.
+
+Support:
+
+- creating a brief;
+- editing a brief;
+- duplicating a brief;
+- saving a brief locally;
+- importing a brief;
+- exporting a brief as JSON;
+- generating a complete prompt;
+- copying the prompt;
+- downloading TXT;
+- downloading Markdown;
+- previewing normalized data;
+- estimating prompt size;
+- importing a completed lhl.zip;
+- validating the package;
+- previewing the package;
+- opening a valid package in the player.
+
+Organize the Studio into manageable steps.
+
+Derive final fields from the attached design document.
+
+Include categories comparable to:
+
+1. Module identity
+2. Premise
+3. Genre
+4. Tone
+5. Themes
+6. Setting
+7. Era
+8. Visual direction
+9. Musical direction
+10. Content boundaries
+11. Difficulty
+12. Complexity
+13. Pacing
+14. Combat emphasis
+15. Exploration emphasis
+16. Narrative emphasis
+17. Four heroes
+18. Four original classes
+19. Final villain
+20. Two starting-town story-driving NPCs
+21. Two wildcard NPCs
+22. Relationship constraints
+23. World structure
+24. Eight progression segments
+25. Map concepts
+26. Required scenes
+27. Secrets
+28. Reversals
+29. Climax
+30. Endings
+31. Enemy concepts
+32. Boss concepts
+33. Equipment
+34. Shops
+35. Economy
+36. Terminology
+37. Locked content
+38. Preferred content
+39. Excluded content
+40. Open creative areas
+
+Every meaningful field supports an authority state:
+
+- LOCKED
+- REQUIRED CONCEPT
+- PREFERRED
+- OPTIONAL
+- OPEN
+- EXCLUDED
+
+Definitions:
+
+LOCKED
+Preserve exactly.
+
+REQUIRED CONCEPT
+Preserve the concept while allowing compliant implementation details.
+
+PREFERRED
+Prioritize when compatible.
+
+OPTIONAL
+Use when helpful.
+
+OPEN
+Invent freely.
+
+EXCLUDED
+Do not use.
+
+Blank fields remain genuine creative space.
+
+Do not require completion of every field.
+
+Provide a completeness indicator without blocking prompt generation.
+
+==================================================
+PROMPT COMPILER
+==================================================
+
+The Module Studio’s primary output is an extended, self-contained prompt that a user can paste into a capable LLM to produce a complete package named:
+
+lhl.zip
+
+The generated prompt must combine:
+
+1. The user’s exact original description.
+2. A normalized readable creative brief.
+3. Locked elements.
+4. Required concepts.
+5. Preferences.
+6. Optional material.
+7. Open creative space.
+8. Exclusions.
+9. A machine-readable copy of the normalized brief.
+10. The full embedded Module Authoring Specification.
+11. Exact schemas or complete schema-equivalent field definitions.
+12. All UCS-PB formulas and constants.
+13. All validation requirements.
+14. The exact lhl.zip directory and file structure.
+15. Asset requirements.
+16. Output instructions.
+17. Packaging instructions.
+18. Self-validation instructions.
+19. A final validation-report format.
+20. Capability-disclosure rules.
+
+The prompt must be sufficient by itself.
+
+A receiving LLM must not need to:
+
+- follow a link;
+- inspect a repository;
+- request another file;
+- know Lunch Hour Legends in advance;
+- infer an undocumented rule.
+
+Treat user-entered text as data.
+
+Delimit and serialize it so it cannot override:
+
+- the package specification;
+- validation requirements;
+- safety requirements;
+- output contract.
+
+==================================================
+REQUIRED GENERATED-PROMPT STRUCTURE
+==================================================
+
+Every extended prompt generated by the Module Studio must follow this general structure:
+
+--------------------------------------------------
+USER’S MODULE REQUEST
+--------------------------------------------------
+
+[Insert the user’s exact original text first.]
+
+--------------------------------------------------
+ROLE
+--------------------------------------------------
+
+You are a senior game designer, systems designer, narrative designer, technical artist, data architect, and Lunch Hour Legends module author.
+
+Create a complete, original, playable Lunch Hour Legends module and package it as:
+
+lhl.zip
+
+This prompt contains the complete module-authoring specification.
+
+You do not need any external website, document, repository, or previous conversation.
+
+--------------------------------------------------
+DELIVERABLE
+--------------------------------------------------
+
+Produce one complete lhl.zip package that:
+
+- follows the exact directory structure in this prompt;
+- contains every required file;
+- conforms to every included schema;
+- uses only supported primitives and conditions;
+- includes all required content;
+- passes all structural, semantic, mechanical, progression, economy, narrative, asset, and reachability checks;
+- can be imported directly into Lunch Hour Legends.
+
+When your environment supports file creation, create and attach the actual lhl.zip file.
+
+When your environment cannot create or attach binary files, return:
+
+1. The complete directory tree.
+2. The full exact contents of every file.
+3. No omitted sections.
+4. No placeholders.
+5. A deterministic packaging command.
+6. Any required checksum manifest.
+7. A precise list of binary assets that still require rendering, only when the specification explicitly permits an external asset stage.
+
+Do not return only:
+
+- a proposal;
+- summary;
+- excerpt;
+- pseudocode;
+- incomplete sample;
+- design outline.
+
+--------------------------------------------------
+PROVENANCE
+--------------------------------------------------
+
+Original design-document provenance link:
+
+https://docs.google.com/document/d/e/2PACX-1vTdVqlcBpTuTrjewf9gthewOI4vkIiOl0Vo1T21NgRwyXpaQul-F2_J_V7ZJcngVhLtfotUe80hRnu2/pub
+
+External access is optional and is not required to complete this task.
+
+All information required to create the module appears in this prompt.
+
+--------------------------------------------------
+NORMALIZED CREATIVE BRIEF
+--------------------------------------------------
+
+[Insert a readable rendering of the user’s normalized module information.]
+
+--------------------------------------------------
+CONTENT AUTHORITY LEVELS
+--------------------------------------------------
+
+LOCKED
+
+[Insert all values that must be preserved exactly.]
+
+REQUIRED CONCEPTS
+
+[Insert all concepts that must remain while compliant implementation details may be designed.]
+
+PREFERENCES
+
+[Insert preferred elements.]
+
+OPTIONAL MATERIAL
+
+[Insert optional ideas.]
+
+OPEN CREATIVE SPACE
+
+[Identify blank and OPEN areas the LLM must invent.]
+
+EXCLUSIONS
+
+[Insert prohibited content, mechanics, names, themes, assets, and changes.]
+
+Locked values cannot be silently changed.
+
+When a locked request conflicts with a mandatory engine rule:
+
+1. Preserve its creative identity.
+2. Explain the exact conflict.
+3. Create the closest legal implementation.
+4. Record the adjustment in the validation report.
+
+--------------------------------------------------
+STRUCTURED MODULE BRIEF
+--------------------------------------------------
+
+Insert the complete normalized Module Studio brief as valid JSON.
+
+--------------------------------------------------
+COMPLETE LUNCH HOUR LEGENDS MODULE SPECIFICATION
+--------------------------------------------------
+
+Insert the complete versioned Module Authoring Specification.
+
+At minimum, include these full subsections:
+
+A. Engine and schema compatibility  
+B. lhl.zip package structure  
+C. Manifest schema  
+D. Metadata schema  
+E. ID and reference conventions  
+F. Common data types  
+G. Nine-character cast schema  
+H. Directed relationship schema  
+I. Self-concept schema  
+J. Four playable heroes  
+K. Original class schema  
+L. Ability schema  
+M. Effect primitives  
+N. Targeting  
+O. Status effects  
+P. Resources and permissions  
+Q. Item schema  
+R. Equipment and consumables  
+S. Treasure progression  
+T. Shops and market stages  
+U. Economy  
+V. Enemy schema  
+W. Formation schema  
+X. Elite and miniboss schema  
+Y. Final villain and boss phases  
+Z. Town and overworld  
+AA. Eight dungeon progression segments  
+AB. Five tilesets  
+AC. Map topology  
+AD. Safe nodes  
+AE. Return-to-town routes  
+AF. Sixteen cutscenes  
+AG. Dialogue and performance data  
+AH. Facts and knowledge state  
+AI. Conditions and mutations  
+AJ. Rewards  
+AK. Endings  
+AL. Character sprites  
+AM. Portrait expressions  
+AN. Battle graphics  
+AO. Enemy graphics  
+AP. Nine motif suites  
+AQ. Twelve-track soundtrack  
+AR. MIDI source requirements  
+AS. OGG runtime requirements  
+AT. Music cueing  
+AU. UCS-PB units and vectors  
+AV. Level reference tables  
+AW. Runtime rank multipliers  
+AX. Class-rank costs  
+AY. Class budgets  
+AZ. Ability calculations  
+BA. Item calculations  
+BB. Enemy Threat Value  
+BC. Formation Threat Value  
+BD. Complexity  
+BE. Modes and flexibility  
+BF. Delays and persistence  
+BG. Summons and transformations  
+BH. Fields and reactions  
+BI. Action generation and recursion  
+BJ. Boss safeguards  
+BK. Dominance  
+BL. Hardbinding  
+BM. Weakness erasure  
+BN. Reachability  
+BO. Validation rules  
+BP. Validation severity  
+BQ. Required balance reports  
+BR. Packaging and integrity  
+BS. Asset formats and limits  
+BT. Save compatibility  
+BU. Worked examples  
+
+Use exact formulas and numerical constants.
+
+--------------------------------------------------
+REQUIRED MODULE CONTENT
+--------------------------------------------------
+
+Generate every component required by the specification, including all applicable:
+
+- metadata;
+- manifest;
+- nine central characters;
+- four playable heroes;
+- one final villain;
+- two starting-town story-driving NPCs;
+- two wildcard NPCs;
+- 72 directed relationship records;
+- nine self-concept records;
+- four original classes;
+- progression checkpoints;
+- abilities;
+- resources;
+- permissions;
+- statuses;
+- equipment;
+- consumables;
+- treasure plan;
+- shops;
+- market stages;
+- enemies;
+- formations;
+- elites;
+- minibosses;
+- boss phases;
+- town;
+- overworld;
+- eight dungeon progression segments;
+- five tilesets;
+- safe nodes;
+- return routes;
+- exactly sixteen cutscenes;
+- dialogue;
+- facts;
+- choices;
+- conditions;
+- state changes;
+- rewards;
+- endings;
+- field sprites;
+- portraits;
+- battle graphics;
+- enemy graphics;
+- nine motif suites;
+- MIDI source data;
+- exactly twelve soundtrack tracks;
+- OGG runtime audio;
+- sound effects;
+- stingers;
+- balance reports;
+- validation metadata.
+
+Do not add generic filler merely to satisfy counts.
+
+Every component must serve the module’s:
+
+- premise;
+- characters;
+- relationships;
+- story;
+- mechanics;
+- pacing;
+- choices;
+- setting.
+
+--------------------------------------------------
+MECHANICAL CALCULATION REQUIREMENTS
+--------------------------------------------------
+
+For every original class, ability, item, enemy, boss phase, and encounter:
+
+1. Apply the exact formulas in the embedded specification.
+2. Show relevant intermediate values.
+3. Record assumptions.
+4. Compare the result with the legal budget.
+5. Mark it pass, warning, or fail.
+6. Correct failures before packaging.
+7. Preserve the calculation report in its required package location.
+
+Do not claim that content is balanced without performing the required calculations.
+
+--------------------------------------------------
+PACKAGE OUTPUT CONTRACT
+--------------------------------------------------
+
+Return one package named:
+
+lhl.zip
+
+Its extracted root must match the exact package structure in the embedded specification.
+
+Do not add an unnecessary enclosing folder.
+
+Every referenced ID must resolve.
+
+Every required file must exist.
+
+All JSON files must:
+
+- be valid JSON;
+- use UTF-8;
+- contain no comments;
+- contain no trailing commas;
+- contain no duplicate keys;
+- conform to the included schemas;
+- use stable IDs;
+- contain no executable code.
+
+All assets must follow the defined:
+
+- path;
+- filename;
+- format;
+- dimensions;
+- duration;
+- bitrate;
+- size;
+- palette;
+- frame order;
+- loop behavior;
+- integrity metadata.
+
+--------------------------------------------------
+SELF-VALIDATION
+--------------------------------------------------
+
+Before producing lhl.zip:
+
+1. Validate the archive tree.
+2. Validate every file.
+3. Resolve every reference.
+4. Confirm engine compatibility.
+5. Confirm schema compatibility.
+6. Confirm nine central characters.
+7. Confirm four playable heroes.
+8. Confirm one final villain.
+9. Confirm two opening-town NPCs.
+10. Confirm two wildcard NPCs.
+11. Confirm 72 directed relationships.
+12. Confirm nine self-concepts.
+13. Recalculate classes.
+14. Recalculate abilities.
+15. Recalculate items.
+16. Recalculate enemies.
+17. Recalculate formations.
+18. Check target multipliers.
+19. Check reliability.
+20. Check applicability.
+21. Check availability.
+22. Check delayed effects.
+23. Check persistent effects.
+24. Check modes.
+25. Check flexibility.
+26. Check complexity.
+27. Check action generation.
+28. Check tempo recursion.
+29. Check reactions.
+30. Check counters.
+31. Check summons.
+32. Check transformations.
+33. Check fields.
+34. Check status diminishing returns.
+35. Check boss phases.
+36. Check phase skipping.
+37. Check weakness erasure.
+38. Check dominance.
+39. Check hardbinding.
+40. Check item loops.
+41. Check resource loops.
+42. Check economy loops.
+43. Confirm eight progression segments.
+44. Confirm every safe node.
+45. Confirm town-return routes.
+46. Confirm 32 major treasure events.
+47. Confirm market stages 0 through 8.
+48. Confirm shop coverage for all four heroes.
+49. Confirm exactly sixteen cutscenes.
+50. Confirm cutscene pacing.
+51. Confirm relationship-derived scene coverage.
+52. Confirm five tilesets.
+53. Confirm map reachability.
+54. Confirm all required portraits.
+55. Confirm all required sprite sheets.
+56. Confirm nine motif suites.
+57. Confirm exactly twelve soundtrack tracks.
+58. Validate MIDI.
+59. Validate OGG audio.
+60. Validate loops and cue references.
+61. Confirm all endings are reachable.
+62. Confirm mandatory progression is not missable.
+63. Confirm all LOCKED elements.
+64. Confirm all EXCLUDED elements.
+65. Confirm no placeholders remain.
+66. Confirm the module can begin, progress, save, reload, return to town, re-enter the dungeon, defeat the final villain, and reach credits.
+
+Correct errors before returning the package.
+
+Warnings may remain only when they represent intentional legal design choices.
+
+--------------------------------------------------
+FINAL VALIDATION REPORT
+--------------------------------------------------
+
+Return a concise report after the package containing:
+
+- module title;
+- module version;
+- schema version;
+- engine compatibility version;
+- package filename;
+- files created;
+- structural-validation result;
+- reference-validation result;
+- character-map result;
+- relationship result;
+- class result;
+- ability result;
+- item result;
+- enemy result;
+- encounter result;
+- treasure result;
+- market result;
+- economy result;
+- cutscene result;
+- map result;
+- graphics result;
+- soundtrack result;
+- reachability result;
+- save-compatibility result;
+- dominance result;
+- hardbinding result;
+- locked-element result;
+- exclusion result;
+- warnings;
+- assumptions;
+- deliberate deviations;
+- recommended playtest targets.
+
+Do not claim validation passed when required files, calculations, references, or content are missing.
+
+==================================================
+LHL.ZIP PACKAGE CONTRACT
+==================================================
+
+Derive and implement the authoritative lhl.zip package contract from the attached design document.
+
+Represent it in:
+
+- TypeScript types;
+- runtime schemas;
+- JSON Schemas;
+- generated prompts;
+- validator documentation;
+- example modules;
+- tests.
+
+The generated prompt must list the exact authoritative package tree.
+
+Do not leave the package tree implicit.
+
+The package specification must define:
+
+- required files;
+- optional files;
+- file purpose;
+- allowed paths;
+- casing;
+- archive-root behavior;
+- schemas;
+- size limits;
+- encoding;
+- asset formats;
+- duplicate-ID behavior;
+- unknown-field behavior;
+- missing-reference behavior;
+- version compatibility;
+- migrations;
+- checksums;
+- forbidden executable content.
+
+==================================================
+MODULE IMPORT
+==================================================
+
+The import workflow must:
+
+1. Accept an lhl.zip file.
+2. Preserve the original archive.
+3. Reject unsafe paths.
+4. Reject executable content.
+5. Inspect file sizes.
+6. Read the manifest.
+7. Determine schema compatibility.
+8. Apply supported migrations.
+9. Validate schemas.
+10. Resolve references.
+11. Validate assets.
+12. Validate mechanics.
+13. Validate progression.
+14. Validate economy.
+15. Validate narrative coverage.
+16. Validate maps.
+17. Validate saves.
+18. Display errors and warnings.
+19. Preview the module.
+20. Require explicit activation.
+21. Preserve the current module if activation fails.
+
+==================================================
+PROMPT PREVIEW AND EXPORT
+==================================================
+
+The Module Studio must provide:
+
+- readable preview;
+- raw-text preview;
+- one-click copy;
+- TXT download;
+- Markdown download;
+- character count;
+- token estimate;
+- specification version;
+- specification hash;
+- confirmation that the complete package contract is included;
+- confirmation that the provenance URL is included;
+- completeness checks;
+- missing-section diagnostics.
+
+Extended mode is the normal mode.
+
+Extended mode must be independently sufficient.
+
+A compact mode may be offered only when clearly labeled as insufficient unless the receiving LLM already has the exact same specification in context.
+
+Never silently remove rules to fit a context window.
+
+When the full generated prompt exceeds a selected model’s context limit:
+
+1. Display the estimated size.
+2. Warn that truncation would produce an incomplete specification.
+3. Offer deterministic multipart export.
+4. Number every part.
+5. Include specification version and hash in every part.
+6. Include a part index and total-part count.
+7. Ensure the final part instructs the LLM to treat all parts as one document.
+8. Preserve every rule across the complete set.
+
+==================================================
+SECURITY AND DATA INTEGRITY
+==================================================
+
+Implement protections appropriate for local module authoring and import:
+
+- sanitize displayed text;
+- treat imported JSON as untrusted;
+- prevent prototype pollution;
+- reject executable code;
+- reject archive traversal;
+- reject absolute paths;
+- reject unsupported symlinks;
+- enforce size limits;
+- enforce file-count limits;
+- delimit user content in generated prompts;
+- keep static instructions separate from user data;
+- preserve data during migration;
+- provide export before destructive migration;
+- do not transmit private text automatically;
+- fail closed when the embedded specification is incomplete.
+
+==================================================
+NO-EXTERNAL-DEPENDENCY TESTS
+==================================================
+
+Create automated tests proving that a complete module can theoretically be constructed using only the generated extended prompt.
+
+Tests must verify that the prompt contains:
+
+- complete lhl.zip structure;
+- every required filename;
+- every required schema or complete equivalent field definition;
+- every mandatory entity;
+- every mandatory field;
+- every enumeration;
+- every relevant constant;
+- every UCS-PB formula;
+- class budgets;
+- ability budgets;
+- item budgets;
+- enemy calculations;
+- formation calculations;
+- complexity rules;
+- recursion rules;
+- dominance rules;
+- hardbinding rules;
+- weakness-erasure rules;
+- character-map rules;
+- relationship requirements;
+- cutscene requirements;
+- tileset requirements;
+- map requirements;
+- treasure requirements;
+- market requirements;
+- soundtrack requirements;
+- graphics requirements;
+- reachability requirements;
+- validation procedures;
+- packaging instructions;
+- user data;
+- locked elements;
+- exclusions;
+- final validation-report contract;
+- full provenance URL.
+
+Add a test that removes all URLs from the generated prompt and verifies that the remaining text still contains everything required to construct a valid module.
+
+Add a test that fails when generated prompts contain dependency language such as:
+
+- “Read the linked document before continuing.”
+- “Consult the design document for the formula.”
+- “See the repository for the schema.”
+- “Use the rules described elsewhere.”
+- “Follow the external specification.”
+- “Details omitted for brevity.”
+
+Add schema-coverage tests comparing generated prompt content with canonical schemas.
+
+Add formula-coverage tests comparing generated prompt constants with the balance engine.
+
+Add tests that fail when:
+
+- a schema field is missing from the prompt;
+- a formula differs;
+- a required package file is omitted;
+- the published URL is altered;
+- the prompt compiler produces an incomplete extended prompt.
+
+==================================================
+GENERAL AUTOMATED TESTING
+==================================================
+
+Create tests for:
+
+1. Core formulas.
+2. Class benchmarks.
+3. Ability benchmarks.
+4. Magic benchmarks.
+5. Item benchmarks.
+6. Enemy benchmarks.
+7. Formation benchmarks.
+8. Target multipliers.
+9. Delay.
+10. Persistence.
+11. Modes.
+12. Flexibility.
+13. Complexity.
+14. Action generation.
+15. Reactions.
+16. Summons.
+17. Transformations.
+18. Fields.
+19. Status diminishing returns.
+20. Item factors.
+21. Economy loops.
+22. Dominance.
+23. Hardbinding.
+24. Character-map counts.
+25. Relationship completeness.
+26. Self-concept completeness.
+27. Cutscene pacing.
+28. Dialogue continuity.
+29. Speaker-swap validation.
+30. Map reachability.
+31. Safe-node return.
+32. Treasure cadence.
+33. Shop refresh.
+34. Hero item coverage.
+35. MIDI legality.
+36. Motif coverage.
+37. OGG loops.
+38. Module references.
+39. Invalid ZIPs.
+40. Save determinism.
+41. Module-version compatibility.
+42. Prompt generation.
+43. Exact preservation of user text.
+44. Exact preservation of locked fields.
+45. Exclusions.
+46. URL presence.
+47. Self-containment.
+48. Clipboard behavior.
+49. TXT export.
+50. Markdown export.
+51. Brief export and import.
+52. Valid module import.
+53. Invalid module rejection.
+
+Include:
+
+- one valid small reference module;
+- one complete canonical reference module when practical;
+- one deliberately invalid module;
+- one Module Studio brief;
+- one generated extended prompt;
+- one multipart generated prompt fixture;
+- one saved-game compatibility fixture.
+
+==================================================
+MVP AND CANONICAL PROFILE
+==================================================
+
+Read the attached design document carefully for the distinction between:
+
+- the immediate minimum viable build;
+- the complete canonical module profile;
+- any condensed testing profile.
+
+Do not mix acceptance rules from different profiles.
+
+Document which features are required in the first executable milestone and which belong to the complete canonical release.
+
+The architecture and schemas must not make the canonical eight-segment, nine-character, sixteen-cutscene, twelve-track profile impossible merely because the first test module is smaller.
+
+Where the design document explicitly requires canonical counts even for launch, follow it.
+
+==================================================
+REFERENCE IMPLEMENTATION
+==================================================
+
+Implement the document’s Battle of the Bands reference cartridge or another explicitly designated reference cartridge as a trusted fixture.
+
+It should demonstrate:
+
+- nine central characters;
+- four heroes;
+- two town NPCs;
+- two wildcard NPCs;
+- one final villain;
+- 72 directed relationships;
+- nine self-concepts;
+- four unique classes;
+- sixteen cutscenes;
+- five tilesets;
+- eight progression segments;
+- safe-node returns;
+- 32 major treasure events;
+- eight market refreshes;
+- representative enemies;
+- elites;
+- miniboss;
+- final boss;
+- nine motif suites;
+- twelve soundtrack tracks;
+- complete save and ending flow.
+
+Use its benchmark content as tests without hardcoding it as the only legal creative result.
+
+==================================================
+DOCUMENTATION AND DELIVERABLES
+==================================================
+
+Create:
+
+- complete runnable source tree;
+- README.md;
+- architecture documentation;
+- assumptions document;
+- terminology glossary;
+- requirements traceability matrix;
+- module-authoring guide;
+- lhl.zip package specification;
+- module-schema documentation;
+- UCS-PB implementation notes;
+- validator reference;
+- map-pipeline guide;
+- graphics-pipeline guide;
+- music-pipeline guide;
+- prompt-compiler documentation;
+- save-format documentation;
+- testing instructions;
+- deployment instructions;
+- example modules;
+- example Module Studio briefs;
+- generated-prompt examples;
+- known-limitations report.
+
+The README must provide exact commands for:
+
+- installing dependencies;
+- running development mode;
+- running tests;
+- building production assets;
+- previewing the production build;
+- validating a module;
+- packing a module;
+- unpacking a module;
+- compiling the embedded prompt specification;
+- checking schema and formula coverage.
+
+State clearly:
+
+- what is complete;
+- what is provisional;
+- what is not implemented;
+- which tests pass;
+- which builds pass;
+- which limitations remain.
+
+==================================================
+IMPLEMENTATION ORDER
+==================================================
+
+Use this dependency order unless the attached document requires another:
+
+1. Read and audit the full design document.
+2. Produce the traceability matrix.
+3. Produce the terminology glossary.
+4. Resolve profile distinctions.
+5. Define canonical schemas.
+6. Define canonical constants and formulas.
+7. Define the lhl.zip contract.
+8. Generate the Module Authoring Specification.
+9. Implement UCS-PB.
+10. Implement validators.
+11. Implement deterministic engine state.
+12. Implement character and relationship systems.
+13. Implement combat.
+14. Implement progression.
+15. Implement maps and safe nodes.
+16. Implement treasure and shops.
+17. Implement cutscenes and dialogue.
+18. Implement graphics manifests.
+19. Implement music manifests and rendering pipeline.
+20. Implement save and load.
+21. Implement module import.
+22. Implement a reference module.
+23. Implement the player application.
+24. Implement the title screen.
+25. Implement the simple Create Module screen.
+26. Implement Module Studio.
+27. Implement the prompt compiler.
+28. Implement prompt preview and export.
+29. Implement no-external-dependency tests.
+30. Complete automated tests.
+31. Run production builds.
+32. Conduct a final requirements audit.
+
+Work in coherent, testable increments.
+
+Run relevant tests after each major subsystem.
+
+==================================================
+ACCEPTANCE CRITERIA
+==================================================
+
+The project is complete only when all of the following are true:
+
+- The entire attached design document has been analyzed.
+- The traceability matrix exists.
+- Mandatory rules are distinguished from examples.
+- Contradictions are resolved or documented.
+- Canonical schemas exist.
+- Canonical constants exist.
+- UCS-PB is implemented.
+- Mechanical calculations are deterministic.
+- Calculation reports are inspectable.
+- The lhl.zip contract is explicit.
+- Module content is declarative.
+- Imported code cannot execute.
+- A valid module can be loaded.
+- A valid module can be played.
+- Saves can be created and restored.
+- Saves remain associated with the correct module.
+- The title screen has exactly four primary options.
+- New Game functions.
+- Continue functions.
+- Load Module functions.
+- Create Module functions.
+- The simple Create Module screen copies the user’s exact request first.
+- The application appends the complete technical specification.
+- The complete copied text is one continuous prompt.
+- No API key is required.
+- No user text is transmitted automatically.
+- The generated extended prompt is self-contained.
+- The generated prompt contains the exact published provenance URL.
+- The generated prompt does not depend on the URL.
+- The generated prompt contains the complete package tree.
+- The generated prompt contains all schemas.
+- The generated prompt contains all formulas.
+- The generated prompt contains all limits.
+- The generated prompt contains all validators.
+- The generated prompt contains all packaging instructions.
+- The generated prompt preserves locked content.
+- The generated prompt preserves exclusions.
+- Open creative space is identified.
+- A receiving LLM is instructed to create an actual lhl.zip when possible.
+- A full file-by-file fallback is required otherwise.
+- An imported generated package receives actionable validation.
+- Invalid packages do not replace the current module.
+- The prompt compiler fails closed when specification material is missing.
+- Removing all URLs from the extended prompt does not remove information needed to construct a valid module.
+- Schema-drift tests pass.
+- Formula-drift tests pass.
+- Important game systems have automated tests.
+- The production build succeeds.
+- The application is keyboard accessible.
+- The application is responsive.
+- The documentation is sufficient for another developer to continue.
+
+==================================================
+WORKING METHOD
+==================================================
+
+Use the tools available in this conversation to create and modify the actual project files.
+
+Keep progress reports brief and concrete.
+
+Do not repeatedly ask for approval of ordinary engineering decisions.
+
+Record reasonable assumptions and continue.
+
+Ask a question only when a missing decision would fundamentally alter the product or make implementation unsafe.
+
+When a problem occurs:
+
+1. Inspect the actual error.
+2. Identify the root cause.
+3. Make the narrowest reliable correction.
+4. Rerun the affected test.
+5. Verify that unrelated behavior still works.
+
+Do not declare the project complete based only on generated source code.
+
+Run:
+
+- unit tests;
+- integration tests;
+- browser tests;
+- module validation;
+- prompt self-containment tests;
+- production build.
+
+Report actual results and remaining limitations.
+
+Begin by reading the attached Lunch Hour Legends design document in full.
+
+Then create:
+
+1. The requirements traceability matrix.
+2. The terminology glossary.
+3. The contradiction and assumptions report.
+4. The proposed canonical repository structure.
+5. The first executable implementation increment.
+
+After presenting those concise artifacts, proceed directly into building the engine and application.
+LUNCH HOUR LEGENDS — STATIC MODULE AUTHORING SPECIFICATION
+Specification profile: browser-proof-0.1 / canonical envelope 2026-07-21
+
+DELIVERABLE CONTRACT
+Return one self-contained ZIP archive named <slug>.lhl.zip. The archive must be usable without opening any external URL. Include manifest.json, game.rpg, design.md, credits.md, validation/report.json, inspectable source JSON, and all declared runtime assets. Do not include executable JavaScript, WebAssembly, native libraries, shell scripts, macros, HTML, or untrusted bytecode. All archive paths must be normalized relative paths. The compressed archive must be no larger than 25 MB and contain no more than 500 files.
+
+CANONICAL CHARACTER MAP
+The central cast is exactly nine characters: four playable heroes, one final villain, two opening-town NPCs, and two wildcard NPCs. This current rule supersedes older examples describing three opening-town NPCs and one wildcard NPC. Include exactly 72 directed interpersonal relationship records (every central character toward each of the other eight) plus nine separate self-concept records.
+
+CANONICAL SHAPE
+Levels are 1–10. The active party is exactly four heroes. The critical path contains exactly sixteen mandatory relationship-derived cutscenes. The soundtrack contains exactly twelve full-length original tracks and nine character motif suites. A canonical dungeon has eight progression segments with safe nodes between floors. ClassBudget(level), point-buy parity, pathfinding, battle simulation, asset limits, manifest hashes, and package security all fail closed.
+
+PROVENANCE
+Optional human reference only: https://docs.google.com/document/d/13W5FZzXpS1kffzpiNnB16faZzHgS6MxbOict7zHtdAM/edit
+Correctness must not depend on opening this URL. Every operative rule is embedded below.
+
+--- BEGIN COMPLETE IMPLEMENTATION AND AUTHORING REQUIREMENTS ---
