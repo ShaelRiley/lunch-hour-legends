@@ -1,3 +1,23 @@
+LUNCH HOUR LEGENDS — STATIC MODULE AUTHORING SPECIFICATION
+Specification profile: browser-proof-0.1 / canonical envelope 2026-07-21
+
+STANDALONE AUTHORITY
+This entire payload is the operative module-authoring specification. It must remain sufficient after every URL is removed and when no attachment, prior chat, repository, website, or external document is available. Any later mention of an “attached design document” records the original production workflow only; do not wait for, request, or depend on that attachment. Apply the executable package contract and current canonical overrides in this preamble first, then apply every compatible requirement embedded below.
+
+DELIVERABLE CONTRACT
+Return one self-contained ZIP archive named <slug>.lhl.zip. Include manifest.json, game.rpg, design.md, credits.md, validation/report.json, inspectable source JSON, and all declared runtime assets. Do not include executable JavaScript, WebAssembly, native libraries, shell scripts, macros, HTML, or untrusted bytecode. Normalize every archive path relative to the archive root. The archive may contain no more than 500 files and may be no larger than 25 MB compressed.
+
+CURRENT CANONICAL OVERRIDES
+The central cast is exactly nine characters: four playable heroes, one final villain, two opening-town NPCs, and two wildcard NPCs. This current rule supersedes older examples that describe three opening-town NPCs and one wildcard NPC. Include exactly 72 directed interpersonal relationship records, every central character toward each of the other eight, plus nine separate self-concept records.
+
+The playable range is level 1 through level 10. The active party is exactly four heroes. The required path contains exactly sixteen mandatory relationship-derived cutscenes. The score contains exactly twelve full-length original tracks and nine character motif suites. The canonical dungeon has eight progression segments with safe nodes between floors. Enforce ClassBudget(level), point-buy parity, pathfinding, battle simulation, asset limits, manifest hashes, and package security as fail-closed requirements.
+
+PROVENANCE ONLY
+https://docs.google.com/document/d/13W5FZzXpS1kffzpiNnB16faZzHgS6MxbOict7zHtdAM/edit
+Correctness must not depend on opening this or any other URL.
+
+--- BEGIN COMPLETE IMPLEMENTATION AND AUTHORING REQUIREMENTS ---
+
 You are the lead game-systems architect, full-stack engineer, UX designer, game-engine developer, technical artist, data architect, validation engineer, and technical documentation author for a production-quality implementation of Lunch Hour Legends.
 
 Your task is to build:
