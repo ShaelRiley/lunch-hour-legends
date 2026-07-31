@@ -1,0 +1,73 @@
+name: Security patch validation
+
+on:
+  push:
+    branches:
+      - agent/patch-react-rsc-cve-2026-44907
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out security branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/patch-react-rsc-cve-2026-44907
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Regenerate lockfile from patched manifest
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Verify patched React resolution
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
+          const expected = '19.2.8';
+          const checks = [
+            ['root react', lock.packages?.['']?.dependencies?.react],
+            ['root react-dom', lock.packages?.['']?.dependencies?.['react-dom']],
+            ['root react-server-dom-webpack', lock.packages?.['']?.devDependencies?.['react-server-dom-webpack']],
+            ['resolved react', lock.packages?.['node_modules/react']?.version],
+            ['resolved react-dom', lock.packages?.['node_modules/react-dom']?.version],
+            ['resolved react-server-dom-webpack', lock.packages?.['node_modules/react-server-dom-webpack']?.version],
+          ];
+          for (const [name, actual] of checks) {
+            if (actual !== expected) throw new Error(`${name}: expected ${expected}, got ${actual}`);
+          }
+          NODE
+
+      - name: Ensure manifest was not rewritten
+        run: git diff --exit-code -- package.json
+
+      - name: Install exact locked dependencies
+        run: npm ci
+
+      - name: Audit all dependencies
+        run: npm audit --audit-level=high
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build and test
+        run: npm test
+
+      - name: Commit validated lockfile
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          git rm .github/workflows/security-patch.yml
+          git commit -m 'Lock patched React security releases'
+          git push origin HEAD:agent/patch-react-rsc-cve-2026-44907
