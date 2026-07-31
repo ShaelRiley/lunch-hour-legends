@@ -1,0 +1,27 @@
+name: Analyze bundled collider cartridge
+
+on:
+  push:
+    branches:
+      - agent/cavebabe-rom-v2
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/analyze-collider.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: collider-analysis
+          path: analysis-collider/
+          if-no-files-found: error
