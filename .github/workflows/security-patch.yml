@@ -33,7 +33,7 @@ jobs:
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Apply non-breaking transitive security fixes
-        run: npm audit fix --package-lock-only --ignore-scripts
+        run: npm audit fix --package-lock-only --ignore-scripts || true
 
       - name: Verify patched dependency resolution
         run: |
@@ -55,6 +55,9 @@ jobs:
             ['resolved react-server-dom-webpack', lock.packages?.['node_modules/react-server-dom-webpack']?.version, '19.2.8'],
             ['resolved vite', lock.packages?.['node_modules/vite']?.version, '8.2.0'],
             ['resolved wrangler', lock.packages?.['node_modules/wrangler']?.version, '4.114.0'],
+            ['overridden postcss', lock.packages?.['node_modules/postcss']?.version, '8.5.18'],
+            ['overridden sharp', lock.packages?.['node_modules/sharp']?.version, '0.35.0'],
+            ['overridden @esbuild-kit esbuild', lock.packages?.['node_modules/@esbuild-kit/core-utils/node_modules/esbuild']?.version, '0.25.12'],
           ];
           for (const [name, actual, expected] of checks) {
             if (actual !== expected) throw new Error(`${name}: expected ${expected}, got ${actual}`);
@@ -67,8 +70,8 @@ jobs:
       - name: Install exact locked dependencies
         run: npm ci
 
-      - name: Audit all dependencies
-        run: npm audit --audit-level=high
+      - name: Require a clean dependency audit
+        run: npm audit --audit-level=low
 
       - name: Lint
         run: npm run lint
