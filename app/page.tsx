@@ -6,14 +6,15 @@ import { parseOhrRpg } from "../lib/ohr-lump";
 
 type Screen = "title" | "game" | "load" | "create" | "saves" | "ohr";
 type Phase = "explore" | "battle" | "victory";
-type ModuleCard = { id: string; title: string; version: string; author: string; playtime: string; verified: boolean; engine: "proof" | "ohr-wasm"; installed?: boolean; saveNamespace?: string; gameHash?: string };
+type ModuleCard = { id: string; title: string; version: string; author: string; playtime: string; verified: boolean; engine: "proof" | "ohr-wasm"; installed?: boolean; saveNamespace?: string; gameHash?: string; builtin?: string; coverArt?: string; artAlt?: string; artLocation?: string; levelRange?: string };
 type RuntimeLaunch = { module: ModuleCard; game?: Uint8Array; builtin?: string };
 type Hero = { id: string; name: string; job: string; hp: number; maxHp: number; mp: number; maxMp: number; color: string };
 type Enemy = { id: string; name: string; hp: number; maxHp: number; intent: string };
 type GameState = { phase: Phase; x: number; y: number; round: number; activeHero: number; heroes: Hero[]; enemies: Enemy[]; log: string[]; battleCleared: boolean; startedAt: number };
 type SaveSlot = { slot: 1 | 2 | 3 | "auto"; moduleId: string; timestamp: number; location: string; level: number; progress: number; state: GameState };
 
-const REFERENCE: ModuleCard = { id: "lhl.battle-of-the-bands.reference", title: "Battle of the Bands", version: "0.1.0-proof", author: "Lunch Hour Legends", playtime: "75–90 MIN", verified: true, engine: "proof" };
+const DEFAULT_CAVEBABE: ModuleCard = { id: "lhl.cavebabe.wheel-of-fire", title: "Cavebabe: Wheel of Fire", version: "1.0.0", author: "Lunch Hour Legends", playtime: "10–20 MIN", verified: true, engine: "ohr-wasm", builtin: "cavebabe", coverArt: "/cavebabe-key-art.svg", artAlt: "Kara and her stone hot rod racing from a volcanic cave", artLocation: "THE VOLCANO ROAD", levelRange: "COMPLETE MICRO-ADVENTURE" };
+const ENGINE_DIAGNOSTIC: ModuleCard = { id: "ohr.upstream.collider", title: "OHRRPGCE Engine Diagnostic", version: "upstream", author: "OHRRPGCE contributors", playtime: "DIAGNOSTIC", verified: true, engine: "ohr-wasm", builtin: "collider", levelRange: "SMOKE TEST" };
 const HEROES: Hero[] = [
   { id: "mara", name: "Mara", job: "Front Man", hp: 104, maxHp: 104, mp: 30, maxMp: 30, color: "#3157b7" },
   { id: "jax", name: "Jax", job: "Guitarist", hp: 86, maxHp: 86, mp: 24, maxMp: 24, color: "#df5544" },
@@ -62,10 +63,10 @@ async function sha256(input: string | Uint8Array) {
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("title");
-  const [module, setModule] = useState<ModuleCard>(()=>{if(typeof window==="undefined")return REFERENCE;const raw=localStorage.getItem("lhl:active-module");if(!raw)return REFERENCE;try{return JSON.parse(raw) as ModuleCard}catch{return REFERENCE}});
+  const [module, setModule] = useState<ModuleCard>(()=>{if(typeof window==="undefined")return DEFAULT_CAVEBABE;const raw=localStorage.getItem("lhl:active-module");if(!raw)return DEFAULT_CAVEBABE;try{const saved=JSON.parse(raw) as ModuleCard;return saved.id==="lhl.battle-of-the-bands.reference"?DEFAULT_CAVEBABE:saved}catch{return DEFAULT_CAVEBABE}});
   const [game, setGame] = useState<GameState>(() => freshGame());
   const [saves, setSaves] = useState<SaveSlot[]>(()=>readSaves(module.id));
-  const [notice, setNotice] = useState("Reference module ready.");
+  const [notice, setNotice] = useState("Cavebabe cartridge ready.");
   const [help, setHelp] = useState(false);
   const [runtime, setRuntime] = useState<RuntimeLaunch>();
   const latest = useMemo(() => [...saves].sort((a,b)=>b.timestamp-a.timestamp)[0], [saves]);
@@ -75,16 +76,16 @@ export default function Home() {
   },[module.id]);
   const autosave = useCallback((state: GameState) => { writeSave(state,"auto"); setNotice("Safe-node autosave updated."); }, [writeSave]);
   const openModule = () => {
-    if (module.engine === "ohr-wasm") { setRuntime({module}); setScreen("ohr"); return; }
+    if (module.engine === "ohr-wasm") { setRuntime({module,builtin:module.builtin}); setScreen("ohr"); return; }
     setGame(freshGame()); setScreen("game");
   };
   const continueModule = () => {
-    if (module.engine === "ohr-wasm") { setRuntime({module}); setScreen("ohr"); return; }
+    if (module.engine === "ohr-wasm") { setRuntime({module,builtin:module.builtin}); setScreen("ohr"); return; }
     if (latest) { setGame(latest.state); setScreen("game"); }
   };
   return <main>
     <Topbar onHelp={()=>setHelp(true)} />
-    {screen === "title" && <Title module={module} canContinue={module.engine === "ohr-wasm" ? Boolean(module.installed) : Boolean(latest)} notice={notice} onNew={openModule} onContinue={continueModule} onLoad={()=>setScreen("load")} onCreate={()=>setScreen("create")} onDiagnostic={()=>{setRuntime({module:REFERENCE,builtin:"collider"});setScreen("ohr")}} />}
+    {screen === "title" && <Title module={module} canContinue={module.engine === "ohr-wasm" ? Boolean(module.builtin || module.installed) : Boolean(latest)} notice={notice} onNew={openModule} onContinue={continueModule} onLoad={()=>setScreen("load")} onCreate={()=>setScreen("create")} onDiagnostic={()=>{setRuntime({module:ENGINE_DIAGNOSTIC,builtin:"collider"});setScreen("ohr")}} />}
     {screen === "game" && <Game game={game} setGame={setGame} onTitle={()=>setScreen("title")} onSaves={()=>setScreen("saves")} onAutosave={autosave} />}
     {screen === "saves" && <SaveScreen saves={saves} onBack={()=>setScreen("game")} onSave={(slot)=>{writeSave(game,slot);setNotice(`Manual slot ${slot} saved.`)}} onLoad={(save)=>{setGame(save.state);setScreen("game")}} />}
     {screen === "load" && <LoadScreen current={module} onBack={()=>setScreen("title")} onActivate={(next,gameBytes)=>{setModule(next);setRuntime({module:next,game:gameBytes});setNotice(`${next.title} validated. Installing into the official runtime…`);setSaves([]);setScreen("ohr")}} />}
@@ -97,11 +98,15 @@ export default function Home() {
 function Topbar({onHelp}:{onHelp:()=>void}) { return <header className="topbar"><div className="brand"><b>◆</b> LHL <span>RUNTIME 0.2</span></div><div><button onClick={onHelp}>How to play</button><span className="audio-note">AUDIO · PLAYER CONTROLLED</span></div></header> }
 
 function Title({module,canContinue,notice,onNew,onContinue,onLoad,onCreate,onDiagnostic}:{module:ModuleCard;canContinue:boolean;notice:string;onNew:()=>void;onContinue:()=>void;onLoad:()=>void;onCreate:()=>void;onDiagnostic:()=>void}) {
+  const loadedKind = module.engine === "ohr-wasm" ? "LOADED OHR CARTRIDGE" : "LOADED INTERACTION PROOF";
   return <section className="title-grid" aria-label="Lunch Hour Legends title screen">
-    <div className="key-art"><img src="/castle-at-dusk.png" alt="Four adventurers overlooking a ruined castle at dusk"/><div className="art-caption"><span>REFERENCE MODULE</span><strong>THE GRAND RESONANCE AUDITORIUM</strong></div></div>
+    <div className={`key-art ${module.coverArt?"":"generated-key-art"}`}>
+      {module.coverArt ? <img src={module.coverArt} alt={module.artAlt??`${module.title} cartridge art`}/> : <div className="generated-cartridge-art" aria-label={`${module.title} cartridge label`}><span>OHR</span><b>{module.title}</b><small>{module.author}</small></div>}
+      <div className="art-caption"><span>{loadedKind}</span><strong>{module.artLocation??module.title.toUpperCase()}</strong></div>
+    </div>
     <div className="title-panel"><div className="gem">◆</div><p className="lunch">LUNCH HOUR</p><h1>LEGENDS</h1><p className="tagline">A complete little RPG before<br/>the afternoon meeting.</p>
       <nav className="main-menu" aria-label="Main menu"><button className="primary" onClick={onNew}>New Game</button><button className="continue" onClick={onContinue} disabled={!canContinue}>Continue</button>{!canContinue&&<small>No compatible save exists for this module.</small>}<button onClick={onLoad}>Load Module</button><button onClick={onCreate}>Create Module</button></nav>
-      <article className="module-card" aria-label={`Active module: ${module.title}`}><div className="cover"><span>♫</span><b>ϟ</b></div><div className="module-copy"><em>ACTIVE MODULE</em><h2>{module.title}</h2><dl><div><dt>TIME</dt><dd>{module.playtime}</dd></div><div><dt>ENGINE</dt><dd>{module.engine === "ohr-wasm" ? "OHRRPGCE WASM" : "REACT TECH PROOF"}</dd></div><div><dt>RANGE</dt><dd>LEVEL 1–10</dd></div></dl></div><div className="verified">◆ {module.verified?"CARTRIDGE VERIFIED":"UNVERIFIED"}</div></article><p className="notice" role="status">{notice}</p>
+      <article className="module-card" aria-label={`Active module: ${module.title}`}><div className="cover"><span>{module.builtin==="cavebabe"?"●":"◆"}</span><b>{module.engine==="ohr-wasm"?"OHR":"UI"}</b></div><div className="module-copy"><em>ACTIVE MODULE</em><h2>{module.title}</h2><dl><div><dt>TIME</dt><dd>{module.playtime}</dd></div><div><dt>ENGINE</dt><dd>{module.engine === "ohr-wasm" ? "OHRRPGCE WASM" : "REACT TECH PROOF"}</dd></div><div><dt>RANGE</dt><dd>{module.levelRange??"MODULE DEFINED"}</dd></div></dl></div><div className="verified">◆ {module.verified?"CARTRIDGE VERIFIED":"UNVERIFIED"}</div></article><p className="notice" role="status">{notice}</p>
       <button className="engine-diagnostic" onClick={onDiagnostic}>Run official OHRRPGCE engine diagnostic</button>
     </div>
   </section>;
@@ -126,6 +131,7 @@ function Party({heroes,active}:{heroes:Hero[];active:number}) { return <div clas
 function SaveScreen({saves,onBack,onSave,onLoad}:{saves:SaveSlot[];onBack:()=>void;onSave:(n:1|2|3)=>void;onLoad:(s:SaveSlot)=>void}) { return <Shell back={onBack} kicker="LOCAL · MODULE-SCOPED" title="Save / Load"><div className="save-list">{([1,2,3] as const).map(n=>{const s=saves.find(x=>x.slot===n);return <article key={n}><div><span>SLOT {n}</span><h2>{s?s.location:"Empty slot"}</h2>{s&&<p>{new Date(s.timestamp).toLocaleString()} · {s.progress}% proof</p>}</div><div><button onClick={()=>onSave(n)}>Save</button>{s&&<button className="primary" onClick={()=>onLoad(s)}>Load</button>}</div></article>})}{saves.find(x=>x.slot==="auto")&&<article><div><span>SAFE-NODE AUTOSAVE</span><h2>{saves.find(x=>x.slot==="auto")!.location}</h2></div><button className="primary" onClick={()=>onLoad(saves.find(x=>x.slot==="auto")!)}>Load</button></article>}</div></Shell> }
 
 function OhrRuntime({launch,onBack,onInstalled}:{launch:RuntimeLaunch;onBack:()=>void;onInstalled:(m:ModuleCard)=>void}) {
+  const diagnostic = launch.builtin === "collider";
   const frame = useRef<HTMLIFrameElement>(null);
   const [status,setStatus] = useState(launch.game ? "Waiting for the official runtime to accept the cartridge…" : "Loading the official OHRRPGCE runtime…");
   const [installed,setInstalled] = useState(Boolean(launch.module.installed));
@@ -155,7 +161,7 @@ function OhrRuntime({launch,onBack,onInstalled}:{launch:RuntimeLaunch;onBack:()=
     return ()=>removeEventListener("message",receive);
   },[launch,onInstalled]);
   return <section className="ohr-shell">
-    <header className="ohr-head"><div><span>OFFICIAL WEB PLAYER · WASM</span><h1>{launch.builtin ? "OHRRPGCE Engine Diagnostic" : launch.module.title}</h1><p>{launch.builtin ? "Bundled upstream collider.rpg smoke cartridge" : `${launch.module.author} · ${launch.module.version}`}</p></div><button onClick={onBack}>← Title Screen</button></header>
+    <header className="ohr-head"><div><span>OFFICIAL WEB PLAYER · WASM</span><h1>{diagnostic ? "OHRRPGCE Engine Diagnostic" : launch.module.title}</h1><p>{diagnostic ? "Bundled upstream collider.rpg smoke cartridge" : `${launch.module.author} · ${launch.module.version}`}</p></div><button onClick={onBack}>← Title Screen</button></header>
     <div className="runtime-frame"><iframe ref={frame} src={src} title={`Official OHRRPGCE player — ${launch.module.title}`} allow="autoplay; fullscreen" /></div>
     <footer className="runtime-status"><div><b className={installed||launch.builtin?"good":""}>{installed||launch.builtin?"◆ READY":"◇ INSTALLING"}</b><span role="status">{status}</span></div><dl><div><dt>ENGINE</dt><dd>OHRRPGCE wip 20260512.14297</dd></div><div><dt>EXECUTION</dt><dd>WebAssembly · <a href="https://rpg.hamsterrepublic.com/ohrrpgce/Web_port" target="_blank" rel="noreferrer">upstream build ↗</a></dd></div><div><dt>SAVES</dt><dd>IndexedDB · module-scoped</dd></div></dl></footer>
   </section>;

@@ -1,0 +1,429 @@
+include, plotscr.hsd
+include, scancode.hsi
+
+global variable(1, scene)
+global variable(2, player)
+global variable(3, part one)
+global variable(4, part two)
+global variable(5, part three)
+global variable(6, dino one)
+global variable(7, dino two)
+global variable(8, dino one direction)
+global variable(9, dino two direction)
+global variable(10, tar one)
+global variable(11, tar two)
+global variable(12, gate)
+global variable(13, parts found)
+global variable(14, hearts)
+global variable(15, hurt cooldown)
+global variable(16, road rock one)
+global variable(17, road rock two)
+global variable(18, road rock three)
+global variable(19, distance)
+global variable(20, boss)
+global variable(21, boss direction)
+global variable(22, shot)
+global variable(23, boss rock)
+global variable(24, boss health)
+global variable(25, playing)
+
+plotscript, collision tester, begin
+  suspend player
+  title screen
+  story card(0)
+  cave hunt
+  story card(1)
+  stonewheel run
+  story card(2)
+  tarpit showdown
+  ending screen
+  game over
+end
+
+script, clear strings, begin
+  $0=""
+  $1=""
+  $2=""
+  $3=""
+  $4=""
+  $5=""
+  $6=""
+  $7=""
+  $8=""
+  $9=""
+  show string at(0, 0, 0)
+  show string at(1, 0, 0)
+  show string at(2, 0, 0)
+  show string at(3, 0, 0)
+  show string at(4, 0, 0)
+  show string at(5, 0, 0)
+  show string at(6, 0, 0)
+  show string at(7, 0, 0)
+  show string at(8, 0, 0)
+  show string at(9, 0, 0)
+end
+
+script, new scene, begin
+  if(scene) then(free slice(scene))
+  scene := create container(320, 200)
+  clear strings
+end
+
+script, add rect, x, y, wide, high, color, begin
+  variable(sl)
+  sl := create rect(wide, high, color)
+  set parent(sl, scene)
+  set rect border(sl, -1)
+  set slice x(sl, x)
+  set slice y(sl, y)
+  exit returning(sl)
+end
+
+script, wait for confirm, begin
+  while(keyval(key:enter) == 0 && keyval(key:space) == 0) do(wait(1))
+  while(keyval(key:enter) || keyval(key:space)) do(wait(1))
+end
+
+script, title screen, begin
+  new scene
+  add rect(0, 0, 320, 200, 1)
+  add rect(0, 150, 320, 50, 2)
+  add rect(24, 122, 272, 28, 6)
+  add rect(44, 104, 26, 18, 4)
+  add rect(250, 96, 24, 26, 4)
+  add rect(146, 101, 28, 21, 10)
+  add rect(154, 88, 12, 13, 14)
+  add rect(112, 128, 96, 8, 8)
+  add rect(124, 136, 18, 18, 0)
+  add rect(178, 136, 18, 18, 0)
+  $0="CAVEBABE"
+  $1="WHEEL OF FIRE"
+  $2="A PREHISTORIC ROCK-N-ROLL MICRO-ADVENTURE"
+  $3="PRESS ENTER OR SPACE"
+  $4="ARROWS / WASD MOVE     SPACE THROWS"
+  show string at(0, 116, 24)
+  show string at(1, 104, 42)
+  show string at(2, 32, 67)
+  show string at(3, 92, 174)
+  show string at(4, 42, 188)
+  wait for confirm
+end
+
+script, story card, card, begin
+  new scene
+  add rect(0, 0, 320, 200, 1)
+  add rect(18, 22, 284, 156, 2)
+  if(card == 0) then(
+    $0="THE SUN IS FALLING. THE VOLCANO IS WAKING."
+    $1="KARA NEEDS THREE WHEELSTONES TO REBUILD"
+    $2="THE FASTEST STONE HOT ROD IN HISTORY."
+    $3="FIND THEM BEFORE THE TAR-PIT TRIBE DOES."
+  )
+  if(card == 1) then(
+    $0="THE WHEELSTONES LOCK TOGETHER WITH A ROAR."
+    $1="KARA KICKS THE GRANITE STARTER."
+    $2="THE STONEWHEEL COUPE LUNGES TOWARD THE VOLCANO."
+    $3="DODGE THE BOULDERS. KEEP THE FIRE ALIVE."
+  )
+  if(card == 2) then(
+    $0="AT THE VOLCANO GATE WAITS THE TAR-PIT TYRANT."
+    $1="HE STOLE THE FIRST FLAME AND BURIED THE ROAD."
+    $2="KARA HAS ONE HOT ROD AND AN ARM FULL OF ROCKS."
+    $3="THAT WILL HAVE TO BE ENOUGH."
+  )
+  $4="PRESS ENTER OR SPACE"
+  show string at(0, 34, 52)
+  show string at(1, 34, 72)
+  show string at(2, 34, 92)
+  show string at(3, 34, 112)
+  show string at(4, 88, 148)
+  wait for confirm
+end
+
+script, make cavebabe, x, y, begin
+  variable(body, hair, boot)
+  player := create container(12, 15)
+  set parent(player, scene)
+  set slice x(player, x)
+  set slice y(player, y)
+  body := create rect(10, 10, 14)
+  set parent(body, player)
+  set rect border(body, -1)
+  set slice x(body, 1)
+  set slice y(body, 4)
+  hair := create rect(12, 5, 4)
+  set parent(hair, player)
+  set rect border(hair, -1)
+  boot := create rect(12, 3, 8)
+  set parent(boot, player)
+  set rect border(boot, -1)
+  set slice y(boot, 12)
+end
+
+script, cave hunt, begin
+  new scene
+  add rect(0, 0, 320, 200, 3)
+  add rect(0, 0, 320, 18, 1)
+  add rect(0, 182, 320, 18, 1)
+  add rect(0, 18, 14, 164, 1)
+  add rect(306, 18, 14, 164, 1)
+  tar one := add rect(88, 80, 52, 28, 0)
+  tar two := add rect(196, 132, 58, 24, 0)
+  part one := add rect(54, 42, 10, 10, 10)
+  part two := add rect(154, 148, 10, 10, 10)
+  part three := add rect(270, 50, 10, 10, 10)
+  dino one := add rect(70, 118, 22, 11, 4)
+  dino two := add rect(218, 68, 22, 11, 4)
+  dino one direction := 1
+  dino two direction := -1
+  gate := add rect(292, 76, 12, 48, 8)
+  make cavebabe(24, 160)
+  parts found := 0
+  hearts := 3
+  hurt cooldown := 0
+  playing := true
+  while(playing) do(
+    move cavebabe
+    update cave hazards
+    collect wheelstones
+    update cave hud
+    if(parts found == 3 && slice collide(player, gate)) then(playing := false)
+    if(keyval(1) >> 1) then(game over)
+    wait(1)
+  )
+end
+
+script, move cavebabe, begin
+  variable(dx, dy)
+  dx := 0
+  dy := 0
+  if(keyval(key:left) || keyval(key:a)) then(dx := -2)
+  if(keyval(key:right) || keyval(key:d)) then(dx := 2)
+  if(keyval(key:up) || keyval(key:w)) then(dy := -2)
+  if(keyval(key:down) || keyval(key:s)) then(dy := 2)
+  set slice x(player, slice x(player) + dx)
+  set slice y(player, slice y(player) + dy)
+  if(slice x(player) < 15) then(set slice x(player, 15))
+  if(slice x(player) > 293) then(set slice x(player, 293))
+  if(slice y(player) < 19) then(set slice y(player, 19))
+  if(slice y(player) > 166) then(set slice y(player, 166))
+end
+
+script, update cave hazards, begin
+  set slice x(dino one, slice x(dino one) + dino one direction)
+  if(slice x(dino one) < 36 || slice x(dino one) > 270) then(dino one direction := dino one direction * -1)
+  set slice x(dino two, slice x(dino two) + dino two direction)
+  if(slice x(dino two) < 46 || slice x(dino two) > 278) then(dino two direction := dino two direction * -1)
+  if(hurt cooldown > 0) then(hurt cooldown -= 1)
+  if(hurt cooldown == 0) then(
+    if(slice collide(player, dino one) || slice collide(player, dino two) || slice collide(player, tar one) || slice collide(player, tar two)) then(
+      hearts -= 1
+      hurt cooldown := 45
+      set slice x(player, 24)
+      set slice y(player, 160)
+      if(hearts <= 0) then(
+        hearts := 3
+        parts found := 0
+        if(part one == 0) then(part one := add rect(54, 42, 10, 10, 10))
+        if(part two == 0) then(part two := add rect(154, 148, 10, 10, 10))
+        if(part three == 0) then(part three := add rect(270, 50, 10, 10, 10))
+      )
+    )
+  )
+end
+
+script, collect wheelstones, begin
+  if(part one && slice collide(player, part one)) then(free slice(part one), part one := 0, parts found += 1)
+  if(part two && slice collide(player, part two)) then(free slice(part two), part two := 0, parts found += 1)
+  if(part three && slice collide(player, part three)) then(free slice(part three), part three := 0, parts found += 1)
+end
+
+script, update cave hud, begin
+  $0="WHEELSTONES "
+  append number(0, parts found)
+  $0+" / 3"
+  $1="HEARTS "
+  append number(1, hearts)
+  if(parts found < 3) then($2="FIND THE THREE GOLD WHEELSTONES") else($2="THE EAST GATE IS OPEN")
+  show string at(0, 8, 3)
+  show string at(1, 218, 3)
+  show string at(2, 62, 187)
+end
+
+script, make hot rod, begin
+  variable(body, wheel one, wheel two, flame)
+  player := create container(30, 14)
+  set parent(player, scene)
+  set slice x(player, 24)
+  set slice y(player, 92)
+  body := create rect(28, 9, 10)
+  set parent(body, player)
+  set rect border(body, -1)
+  wheel one := create rect(7, 7, 0)
+  set parent(wheel one, player)
+  set rect border(wheel one, -1)
+  set slice x(wheel one, 4)
+  set slice y(wheel one, 7)
+  wheel two := create rect(7, 7, 0)
+  set parent(wheel two, player)
+  set rect border(wheel two, -1)
+  set slice x(wheel two, 20)
+  set slice y(wheel two, 7)
+  flame := create rect(7, 5, 4)
+  set parent(flame, player)
+  set rect border(flame, -1)
+  set slice x(flame, -6)
+  set slice y(flame, 2)
+end
+
+script, stonewheel run, begin
+  new scene
+  add rect(0, 0, 320, 200, 1)
+  add rect(0, 28, 320, 144, 7)
+  add rect(0, 28, 320, 8, 6)
+  add rect(0, 164, 320, 8, 6)
+  make hot rod
+  road rock one := add rect(250, 52, 18, 18, 4)
+  road rock two := add rect(350, 104, 24, 16, 4)
+  road rock three := add rect(440, 138, 16, 20, 4)
+  hearts := 3
+  distance := 0
+  hurt cooldown := 0
+  while(distance < 1500) do(
+    drive hot rod
+    update road rock(road rock one, 2)
+    update road rock(road rock two, 3)
+    update road rock(road rock three, 4)
+    if(hurt cooldown > 0) then(hurt cooldown -= 1)
+    if(hurt cooldown == 0 && (slice collide(player, road rock one) || slice collide(player, road rock two) || slice collide(player, road rock three))) then(
+      hearts -= 1
+      hurt cooldown := 50
+      set slice y(player, 92)
+      if(hearts <= 0) then(hearts := 3, distance := 0)
+    )
+    distance += 1
+    if(keyval(key:right) || keyval(key:d)) then(distance += 1)
+    update road hud
+    if(keyval(1) >> 1) then(game over)
+    wait(1)
+  )
+end
+
+script, drive hot rod, begin
+  if(keyval(key:up) || keyval(key:w)) then(set slice y(player, slice y(player) -- 2))
+  if(keyval(key:down) || keyval(key:s)) then(set slice y(player, slice y(player) + 2))
+  if(slice y(player) < 38) then(set slice y(player, 38))
+  if(slice y(player) > 148) then(set slice y(player, 148))
+end
+
+script, update road rock, rock, speed, begin
+  set slice x(rock, slice x(rock) -- speed)
+  if(slice x(rock) < -28) then(
+    set slice x(rock, 320 + random(20, 140))
+    set slice y(rock, random(42, 146))
+  )
+end
+
+script, update road hud, begin
+  $0="VOLCANO ROAD "
+  append number(0, distance / 15)
+  $0+"%"
+  $1="HEARTS "
+  append number(1, hearts)
+  $2="UP / DOWN STEER     RIGHT BOOSTS"
+  show string at(0, 8, 6)
+  show string at(1, 224, 6)
+  show string at(2, 42, 181)
+end
+
+script, tarpit showdown, begin
+  new scene
+  add rect(0, 0, 320, 200, 1)
+  add rect(0, 20, 320, 160, 3)
+  add rect(0, 20, 320, 12, 4)
+  add rect(0, 168, 320, 12, 0)
+  make hot rod
+  set slice x(player, 145)
+  set slice y(player, 148)
+  boss := add rect(140, 42, 42, 26, 4)
+  boss rock := add rect(156, 75, 8, 8, 0)
+  boss direction := 1
+  boss health := 8
+  hearts := 3
+  shot := 0
+  hurt cooldown := 0
+  while(boss health > 0) do(
+    boss controls
+    update boss
+    update boss hud
+    if(keyval(1) >> 1) then(game over)
+    wait(1)
+  )
+end
+
+script, boss controls, begin
+  if(keyval(key:left) || keyval(key:a)) then(set slice x(player, slice x(player) -- 2))
+  if(keyval(key:right) || keyval(key:d)) then(set slice x(player, slice x(player) + 2))
+  if(slice x(player) < 10) then(set slice x(player, 10))
+  if(slice x(player) > 280) then(set slice x(player, 280))
+  if((keyval(key:space) >> 1) && shot == 0) then(
+    shot := add rect(slice x(player) + 13, slice y(player) -- 8, 5, 8, 14)
+  )
+  if(shot) then(
+    set slice y(shot, slice y(shot) -- 4)
+    if(slice collide(shot, boss)) then(free slice(shot), shot := 0, boss health -= 1)
+    if(shot && slice y(shot) < 20) then(free slice(shot), shot := 0)
+  )
+end
+
+script, update boss, begin
+  set slice x(boss, slice x(boss) + boss direction)
+  if(slice x(boss) < 30 || slice x(boss) > 248) then(boss direction := boss direction * -1)
+  set slice y(boss rock, slice y(boss rock) + 3)
+  if(slice y(boss rock) > 176) then(
+    set slice x(boss rock, slice x(boss) + 17)
+    set slice y(boss rock, 70)
+  )
+  if(hurt cooldown > 0) then(hurt cooldown -= 1)
+  if(hurt cooldown == 0 && slice collide(player, boss rock)) then(
+    hearts -= 1
+    hurt cooldown := 50
+    set slice y(boss rock, 70)
+    if(hearts <= 0) then(hearts := 3, boss health := 8)
+  )
+end
+
+script, update boss hud, begin
+  $0="TAR-PIT TYRANT "
+  append number(0, boss health)
+  $0+" / 8"
+  $1="HEARTS "
+  append number(1, hearts)
+  $2="LEFT / RIGHT MOVE     SPACE THROWS ROCK"
+  show string at(0, 8, 4)
+  show string at(1, 225, 4)
+  show string at(2, 26, 184)
+end
+
+script, ending screen, begin
+  new scene
+  add rect(0, 0, 320, 200, 1)
+  add rect(0, 130, 320, 70, 4)
+  add rect(118, 102, 84, 28, 10)
+  add rect(130, 126, 18, 18, 0)
+  add rect(174, 126, 18, 18, 0)
+  add rect(154, 44, 12, 58, 14)
+  $0="THE FIRST FLAME IS FREE."
+  $1="KARA AND THE STONEWHEEL COUPE"
+  $2="RACE INTO A LOUDER TOMORROW."
+  $3="CAVEBABE: WHEEL OF FIRE"
+  $4="COMPLETE"
+  $5="PRESS ENTER OR SPACE TO RETURN TO THE AGES"
+  show string at(0, 75, 20)
+  show string at(1, 57, 66)
+  show string at(2, 69, 84)
+  show string at(3, 72, 157)
+  show string at(4, 130, 173)
+  show string at(5, 34, 190)
+  wait for confirm
+end

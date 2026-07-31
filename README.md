@@ -16,10 +16,12 @@ This is an early development build. It currently includes:
 - module-scoped IndexedDB cartridge installation and persistent saves;
 - local `.lhl.zip` validation with path, executable, compressed-size, expanded-size, manifest, SHA-256, and native OHR lump checks;
 - a lossless native OHR lump-container parser and rebuilder;
-- an explicitly labeled React interaction proof for launcher, battle, and save UX;
+- a complete bundled native OHRRPGCE micro-adventure, **Cavebabe: Wheel of Fire**, with three playable acts and a full ending;
+- title-screen art and metadata derived from the cartridge actually loaded;
+- an explicitly labeled legacy React interaction proof retained for launcher, battle, and save UX testing;
 - a self-contained campaign-authoring prompt compiler.
 
-Complete generated campaigns are not implemented yet. The current campaign-compiler work can safely inspect and rebuild native `.rpg` containers, but does not yet generate all maps, heroes, dialogue, battles, scripts, graphics, and audio required for a finished campaign.
+The bundled Cavebabe cartridge is complete and playable. Arbitrary **generated** campaigns remain a later milestone: the current campaign compiler can safely inspect and rebuild native `.rpg` containers, but does not yet generate every map, hero, dialogue tree, battle, script, graphic, and audio asset required for unrestricted campaign generation.
 
 ## Development
 
