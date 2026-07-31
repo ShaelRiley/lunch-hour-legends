@@ -20,8 +20,11 @@
   <script>
     const params = new URLSearchParams(location.search);
     const builtin = params.get("builtin");
+    const packagedBuiltins = new Set(["collider", "inputtest", "turntest"]);
+    const externalBuiltin = Boolean(builtin && !packagedBuiltins.has(builtin));
+    const safeBuiltin = (builtin || "").replace(/[^a-zA-Z0-9._-]/g,"_");
     const moduleId = (params.get("module") || "unassigned").replace(/[^a-zA-Z0-9._-]/g,"_");
-    const gamePath = builtin ? `/games/${builtin}.rpg` : `/workspace/lhl/${moduleId}/game.rpg`;
+    const gamePath = builtin ? (externalBuiltin ? `/workspace/lhl-builtins/${safeBuiltin}.rpg` : `/games/${safeBuiltin}.rpg`) : `/workspace/lhl/${moduleId}/game.rpg`;
     const status = document.getElementById("status");
     const start = document.getElementById("start");
     const setStatus = (message, kind = "") => { status.textContent = message; status.className = kind; };
@@ -70,11 +73,25 @@
         FS.writeFile("/ohrrpgce_arguments.txt", `${gamePath}\n`);
         Module.addRunDependency("LHL_SYNC");
         if (!builtin) Module.addRunDependency("LHL_CARTRIDGE");
+        if (externalBuiltin) Module.addRunDependency("LHL_BUILTIN");
         FS.syncfs(true, error => {
           syncDependencyOpen = false;
           Module.removeRunDependency("LHL_SYNC");
           if (error) { setStatus(`Save filesystem error: ${error}`, "error"); tellParent("lhl:ohr-error", { message:String(error) }); return; }
-          if (builtin) { tellParent("lhl:ohr-starting", { gamePath }); return; }
+          if (externalBuiltin) {
+    fetch(`/games/${encodeURIComponent(safeBuiltin)}.rpg`)
+      .then(response => { if (!response.ok) throw new Error(`Bundled cartridge returned ${response.status}`); return response.arrayBuffer(); })
+      .then(buffer => {
+        const bytes = new Uint8Array(buffer);
+        ensureDir("/workspace/lhl-builtins");
+        FS.writeFile(gamePath, bytes);
+        Module.removeRunDependency("LHL_BUILTIN");
+        tellParent("lhl:ohr-mounted", { builtin:true, bytes:bytes.byteLength, gamePath });
+      })
+      .catch(error => { setStatus(`Bundled cartridge mount failed: ${error}`, "error"); tellParent("lhl:ohr-error", { message:String(error) }); });
+    return;
+  }
+  if (builtin) { tellParent("lhl:ohr-starting", { gamePath }); return; }
           if (FS.analyzePath(gamePath).exists && params.get("installed") === "1") {
             cartridgeDependencyOpen = false;
             Module.removeRunDependency("LHL_CARTRIDGE");

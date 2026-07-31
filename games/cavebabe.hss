@@ -188,7 +188,7 @@ script, cave hunt, begin
     collect wheelstones
     update cave hud
     if(parts found == 3 && slice collide(player, gate)) then(playing := false)
-    if(keyval(key:escape) >> 1) then(game over)
+    if(keyval(1) >> 1) then(game over)
     wait(1)
   )
 end
@@ -304,7 +304,7 @@ script, stonewheel run, begin
     distance += 1
     if(keyval(key:right) || keyval(key:d)) then(distance += 1)
     update road hud
-    if(keyval(key:escape) >> 1) then(game over)
+    if(keyval(1) >> 1) then(game over)
     wait(1)
   )
 end
@@ -356,7 +356,7 @@ script, tarpit showdown, begin
     boss controls
     update boss
     update boss hud
-    if(keyval(key:escape) >> 1) then(game over)
+    if(keyval(1) >> 1) then(game over)
     wait(1)
   )
 end
