@@ -35,7 +35,17 @@ jobs:
           cat scripts/.cavebabe-patch.b64.* | base64 -d > /tmp/apply-cavebabe-launcher.py
           sha256sum /tmp/apply-cavebabe-launcher.py
           python -m py_compile /tmp/apply-cavebabe-launcher.py
+          sed -i '55,58d' /tmp/apply-cavebabe-launcher.py
           python /tmp/apply-cavebabe-launcher.py
+          python - <<'PY'
+          from pathlib import Path
+          page_path = Path('app/page.tsx')
+          page = page_path.read_text()
+          start = page.index('function Help(')
+          help_component = '''function Help({onClose}:{onClose:()=>void}) { return <div className="modal" role="dialog" aria-modal="true" aria-labelledby="help-title"><article><button className="close" onClick={onClose}>×</button><span>QUICK START</span><h2 id="help-title">The loaded cartridge defines the adventure.</h2><ol><li>Choose <b>New Game</b> to start the active ROM.</li><li>Inside Cavebabe, move with arrows or WASD.</li><li>Use Space to throw rocks during the final showdown.</li><li>OHRRPGCE saves persist locally in module-scoped browser storage.</li></ol><p>The title art, caption, timing, engine, and range now describe the cartridge actually loaded. Load Module validates a local archive before activation.</p></article></div> }
+'''
+          page_path.write_text(page[:start] + help_component)
+          PY
       - name: Normalize source for the bundled OHR key map
         run: sed -i 's/key:escape/1/g' games/cavebabe.hss
       - name: Extract native OHRRPGCE base cartridge
