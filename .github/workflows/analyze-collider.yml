@@ -44,7 +44,7 @@ jobs:
         run: |
           set -o pipefail
           CUSTOM=/tmp/ohr/ohrrpgce/ohrrpgce-custom
-          xvfb-run -a env SDL_AUDIODRIVER=dummy "$CUSTOM" -nowait "$GITHUB_WORKSPACE/public/games/cavebabe.rpg" "$GITHUB_WORKSPACE/games/cavebabe.hss" 2>&1 | tee build/cavebabe/custom.log
+          timeout --signal=TERM --kill-after=10s 120s xvfb-run -a env SDL_AUDIODRIVER=dummy "$CUSTOM" -hsflags k -nowait "$GITHUB_WORKSPACE/public/games/cavebabe.rpg" "$GITHUB_WORKSPACE/games/cavebabe.hss" 2>&1 | tee build/cavebabe/custom.log
       - name: Verify generated native cartridge
         run: |
           node --input-type=module <<'NODE'
