@@ -32,21 +32,31 @@ jobs:
       - name: Regenerate lockfile from patched manifest
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
-      - name: Verify patched React resolution
+      - name: Apply non-breaking transitive security fixes
+        run: npm audit fix --package-lock-only --ignore-scripts
+
+      - name: Verify patched dependency resolution
         run: |
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const lock = JSON.parse(await readFile('package-lock.json', 'utf8'));
-          const expected = '19.2.8';
           const checks = [
-            ['root react', lock.packages?.['']?.dependencies?.react],
-            ['root react-dom', lock.packages?.['']?.dependencies?.['react-dom']],
-            ['root react-server-dom-webpack', lock.packages?.['']?.devDependencies?.['react-server-dom-webpack']],
-            ['resolved react', lock.packages?.['node_modules/react']?.version],
-            ['resolved react-dom', lock.packages?.['node_modules/react-dom']?.version],
-            ['resolved react-server-dom-webpack', lock.packages?.['node_modules/react-server-dom-webpack']?.version],
+            ['root next', lock.packages?.['']?.dependencies?.next, '16.2.12'],
+            ['root react', lock.packages?.['']?.dependencies?.react, '19.2.8'],
+            ['root react-dom', lock.packages?.['']?.dependencies?.['react-dom'], '19.2.8'],
+            ['root @cloudflare/vite-plugin', lock.packages?.['']?.devDependencies?.['@cloudflare/vite-plugin'], '1.50.0'],
+            ['root react-server-dom-webpack', lock.packages?.['']?.devDependencies?.['react-server-dom-webpack'], '19.2.8'],
+            ['root vite', lock.packages?.['']?.devDependencies?.vite, '8.2.0'],
+            ['root wrangler', lock.packages?.['']?.devDependencies?.wrangler, '4.114.0'],
+            ['resolved next', lock.packages?.['node_modules/next']?.version, '16.2.12'],
+            ['resolved react', lock.packages?.['node_modules/react']?.version, '19.2.8'],
+            ['resolved react-dom', lock.packages?.['node_modules/react-dom']?.version, '19.2.8'],
+            ['resolved @cloudflare/vite-plugin', lock.packages?.['node_modules/@cloudflare/vite-plugin']?.version, '1.50.0'],
+            ['resolved react-server-dom-webpack', lock.packages?.['node_modules/react-server-dom-webpack']?.version, '19.2.8'],
+            ['resolved vite', lock.packages?.['node_modules/vite']?.version, '8.2.0'],
+            ['resolved wrangler', lock.packages?.['node_modules/wrangler']?.version, '4.114.0'],
           ];
-          for (const [name, actual] of checks) {
+          for (const [name, actual, expected] of checks) {
             if (actual !== expected) throw new Error(`${name}: expected ${expected}, got ${actual}`);
           }
           NODE
@@ -72,5 +82,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add package-lock.json
           git rm .github/workflows/security-patch.yml
-          git commit -m 'Lock patched React security releases'
+          git commit -m 'Lock validated security dependency updates'
           git push origin HEAD:agent/patch-react-rsc-cve-2026-44907
