@@ -20,10 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install headless editor dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xterm
       - name: Extract native OHRRPGCE base cartridge
         run: |
           mkdir -p public/games build/cavebabe
@@ -39,12 +35,17 @@ jobs:
           curl -fsSL https://hamsterrepublic.com/ohrrpgce/nightly/ohrrpgce-linux-wip-x86_64.tar.bz2 -o /tmp/ohr.tar.bz2
           mkdir -p /tmp/ohr
           tar -xjf /tmp/ohr.tar.bz2 -C /tmp/ohr
-      - name: Compile and import cavebabe plotscripts
+      - name: Compile cavebabe plotscripts with HSpeak
+        shell: bash
+        run: |
+          set -o pipefail
+          /tmp/ohr/ohrrpgce/hspeak -kjy "$GITHUB_WORKSPACE/games/cavebabe.hss" "$GITHUB_WORKSPACE/build/cavebabe/cavebabe.hs" 2>&1 | tee build/cavebabe/hspeak.log
+      - name: Import compiled scripts into native cartridge
         shell: bash
         run: |
           set -o pipefail
           CUSTOM=/tmp/ohr/ohrrpgce/ohrrpgce-custom
-          timeout --signal=TERM --kill-after=10s 120s xvfb-run -a env SDL_AUDIODRIVER=dummy "$CUSTOM" -hsflags k -nowait "$GITHUB_WORKSPACE/public/games/cavebabe.rpg" "$GITHUB_WORKSPACE/games/cavebabe.hss" 2>&1 | tee build/cavebabe/custom.log
+          timeout --signal=TERM --kill-after=10s 120s xvfb-run -a env SDL_AUDIODRIVER=dummy "$CUSTOM" -nowait "$GITHUB_WORKSPACE/public/games/cavebabe.rpg" "$GITHUB_WORKSPACE/build/cavebabe/cavebabe.hs" 2>&1 | tee build/cavebabe/custom.log
       - name: Verify generated native cartridge
         run: |
           node --input-type=module <<'NODE'
