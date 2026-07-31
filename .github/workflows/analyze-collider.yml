@@ -35,7 +35,19 @@ jobs:
           cat scripts/.cavebabe-patch.b64.* | base64 -d > /tmp/apply-cavebabe-launcher.py
           sha256sum /tmp/apply-cavebabe-launcher.py
           python -m py_compile /tmp/apply-cavebabe-launcher.py
-          sed -i '61,104d;55,58d' /tmp/apply-cavebabe-launcher.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/apply-cavebabe-launcher.py')
+          script = path.read_text()
+          help_start = script.index("old='function Help")
+          help_end = script.index('page_path.write_text(page)', help_start)
+          script = script[:help_start] + script[help_end:]
+          player_start = script.index("player_path=root/'public/ohr/lhl-player.html'")
+          css_start = script.index("css_path=root/'app/globals.css'", player_start)
+          script = script[:player_start] + script[css_start:]
+          path.write_text(script)
+          PY
+          python -m py_compile /tmp/apply-cavebabe-launcher.py
           python /tmp/apply-cavebabe-launcher.py
       - name: Mount repository-shipped ROMs in the OHR wrapper
         run: |
