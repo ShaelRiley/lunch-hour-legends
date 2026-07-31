@@ -20,6 +20,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install headless editor dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xterm
       - name: Extract native OHRRPGCE base cartridge
         run: |
           mkdir -p public/games build/cavebabe
@@ -36,7 +40,9 @@ jobs:
           mkdir -p /tmp/ohr
           tar -xjf /tmp/ohr.tar.bz2 -C /tmp/ohr
       - name: Compile and import cavebabe plotscripts
+        shell: bash
         run: |
+          set -o pipefail
           CUSTOM=/tmp/ohr/ohrrpgce/ohrrpgce-custom
           xvfb-run -a env SDL_AUDIODRIVER=dummy "$CUSTOM" -nowait "$GITHUB_WORKSPACE/public/games/cavebabe.rpg" "$GITHUB_WORKSPACE/games/cavebabe.hss" 2>&1 | tee build/cavebabe/custom.log
       - name: Verify generated native cartridge
