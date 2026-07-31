@@ -1,4 +1,4 @@
-name: Analyze bundled collider cartridge
+name: Probe OHRRPGCE build tools
 
 on:
   push:
@@ -12,16 +12,33 @@ permissions:
   contents: read
 
 jobs:
-  analyze:
+  probe:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: node scripts/analyze-collider.mjs
+      - name: Download official OHRRPGCE Linux toolchain
+        run: |
+          curl -fsSL https://hamsterrepublic.com/ohrrpgce/nightly/ohrrpgce-linux-wip-x86_64.tar.bz2 -o /tmp/ohr.tar.bz2
+          mkdir -p /tmp/ohr
+          tar -xjf /tmp/ohr.tar.bz2 -C /tmp/ohr
+      - name: Inspect compiler and editor command line
+        run: |
+          set +e
+          find /tmp/ohr -maxdepth 3 -type f -printf '%p\n' | sort | tee /tmp/tool-files.txt
+          HSPEAK=$(find /tmp/ohr -type f -iname 'hspeak*' -perm -111 | head -1)
+          CUSTOM=$(find /tmp/ohr -type f \( -iname 'ohrrpgce-custom' -o -iname 'custom' \) -perm -111 | head -1)
+          {
+            echo "HSPEAK=$HSPEAK"
+            "$HSPEAK" --help
+            "$HSPEAK" -h
+            echo "CUSTOM=$CUSTOM"
+            SDL_VIDEODRIVER=dummy "$CUSTOM" --help
+            SDL_VIDEODRIVER=dummy "$CUSTOM" -h
+          } 2>&1 | tee /tmp/tool-help.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: collider-analysis
-          path: analysis-collider/
+          name: ohr-tool-probe
+          path: |
+            /tmp/tool-files.txt
+            /tmp/tool-help.txt
           if-no-files-found: error
