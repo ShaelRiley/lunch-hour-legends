@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Normalize source for the bundled OHR key map
+        run: sed -i 's/key:escape/1/g' games/cavebabe.hss
       - name: Extract native OHRRPGCE base cartridge
         run: |
           mkdir -p public/games build/cavebabe
