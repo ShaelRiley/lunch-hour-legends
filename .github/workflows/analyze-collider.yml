@@ -1,4 +1,4 @@
-name: Probe OHRRPGCE build tools
+name: Build cavebabe cartridge
 
 on:
   push:
@@ -12,33 +12,63 @@ permissions:
   contents: read
 
 jobs:
-  probe:
+  build-rom:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Extract native OHRRPGCE base cartridge
+        run: |
+          mkdir -p public/games build/cavebabe
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const data = new Uint8Array(await readFile('public/ohr/ohrrpgce-game.data'));
+          const collider = data.slice(34, 549767);
+          if (collider.byteLength !== 549733) throw new Error(`Unexpected base cartridge size: ${collider.byteLength}`);
+          await writeFile('public/games/cavebabe.rpg', collider);
+          NODE
       - name: Download official OHRRPGCE Linux toolchain
         run: |
           curl -fsSL https://hamsterrepublic.com/ohrrpgce/nightly/ohrrpgce-linux-wip-x86_64.tar.bz2 -o /tmp/ohr.tar.bz2
           mkdir -p /tmp/ohr
           tar -xjf /tmp/ohr.tar.bz2 -C /tmp/ohr
-      - name: Inspect compiler and editor command line
+      - name: Compile and import cavebabe plotscripts
         run: |
-          set +e
-          find /tmp/ohr -maxdepth 3 -type f -printf '%p\n' | sort | tee /tmp/tool-files.txt
-          HSPEAK=$(find /tmp/ohr -type f -iname 'hspeak*' -perm -111 | head -1)
-          CUSTOM=$(find /tmp/ohr -type f \( -iname 'ohrrpgce-custom' -o -iname 'custom' \) -perm -111 | head -1)
-          {
-            echo "HSPEAK=$HSPEAK"
-            "$HSPEAK" --help
-            "$HSPEAK" -h
-            echo "CUSTOM=$CUSTOM"
-            SDL_VIDEODRIVER=dummy "$CUSTOM" --help
-            SDL_VIDEODRIVER=dummy "$CUSTOM" -h
-          } 2>&1 | tee /tmp/tool-help.txt
+          CUSTOM=/tmp/ohr/ohrrpgce/ohrrpgce-custom
+          xvfb-run -a env SDL_AUDIODRIVER=dummy "$CUSTOM" -nowait "$GITHUB_WORKSPACE/public/games/cavebabe.rpg" "$GITHUB_WORKSPACE/games/cavebabe.hss" 2>&1 | tee build/cavebabe/custom.log
+      - name: Verify generated native cartridge
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+          import { createHash } from 'node:crypto';
+          import { parseOhrRpg } from './lib/ohr-lump.ts';
+          const game = new Uint8Array(await readFile('public/games/cavebabe.rpg'));
+          const lumps = parseOhrRpg(game);
+          const names = new Set(lumps.map(lump => lump.name.toLowerCase()));
+          for (const required of ['archinym.lmp','ohrrpgce.gen','ohrrpgce.hsp','plotscr.lst','lookup1.bin']) {
+            if (!names.has(required)) throw new Error(`Missing ${required}`);
+          }
+          const hsp = lumps.find(lump => lump.name.toLowerCase() === 'ohrrpgce.hsp');
+          const text = new TextDecoder('latin1').decode(hsp.data);
+          for (const marker of ['CAVEBABE','WHEEL OF FIRE','tarpit showdown','stonewheel run']) {
+            if (!text.toLowerCase().includes(marker.toLowerCase())) throw new Error(`Missing compiled/source marker: ${marker}`);
+          }
+          const report = {
+            bytes: game.byteLength,
+            sha256: createHash('sha256').update(game).digest('hex'),
+            lumps: lumps.length,
+            scriptSourceMarkers: true
+          };
+          await writeFile('build/cavebabe/report.json', JSON.stringify(report, null, 2));
+          console.log(report);
+          NODE
       - uses: actions/upload-artifact@v4
         with:
-          name: ohr-tool-probe
+          name: cavebabe-rom-build
           path: |
-            /tmp/tool-files.txt
-            /tmp/tool-help.txt
+            public/games/cavebabe.rpg
+            build/cavebabe/
           if-no-files-found: error
