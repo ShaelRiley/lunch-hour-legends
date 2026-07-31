@@ -1,0 +1,31 @@
+name: Export launcher source snapshot
+
+on:
+  push:
+    branches:
+      - agent/cavebabe-rom-v2
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lhl-source-snapshot
+          path: |
+            app/page.tsx
+            app/globals.css
+            public/ohr/lhl-player.html
+            README.md
+            tests/
+            lib/
+            package.json
+            package-lock.json
+          if-no-files-found: error
