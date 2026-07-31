@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/patch-react-rsc-cve-2026-44907
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
