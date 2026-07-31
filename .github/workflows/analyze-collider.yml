@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - agent/cavebabe-rom-v2
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: cavebabe-publish
+  cancel-in-progress: true
 
 permissions:
   contents: write
