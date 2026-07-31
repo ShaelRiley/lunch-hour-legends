@@ -33,7 +33,7 @@ const printable = lumps.map(({ name, size, bytes }) => {
     return code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 126);
   }).length;
   const ratio = bytes.length ? chars / bytes.length : 0;
-  const strings = text.match(/[ -~]{4,}/g)?.slice(0, 80) ?? [];
+  const strings = text.match(/[ -~]{4,}/g)?.slice(0, 100) ?? [];
   return { name, size, printableRatio: Number(ratio.toFixed(3)), strings };
 });
 
